@@ -20,7 +20,8 @@ class ViewersApp(QtWidgets.QMainWindow):
         self.ui.vtk_layout.setContentsMargins(0,0,0,0) #left, up, right, down
         self.ui.vtk_panel.setLayout(self.ui.vtk_layout)
         
-        self.ui.comboBox.activated.connect(self.vtk_widget.set_Resolution)
+        self.ui.comboBox.activated.connect(self.vtk_widget.Switch_Mode)
+        self.ui.Resolution.valueChanged.connect(self.vtk_widget.set_Resolution)
         self.ui.radioButton.clicked.connect(self.vtk_widget.button_event)
         
     def initialize(self):
@@ -68,6 +69,7 @@ class QMeshViewer(QtWidgets.QFrame):
         self.renderer = renderer
         self.sphere = sphereSource
         self.actor = actor
+        
     def start(self):
         self.interactor.Initialize()
         self.interactor.Start()
