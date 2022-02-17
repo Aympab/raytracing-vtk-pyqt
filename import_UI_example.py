@@ -2,7 +2,7 @@ import vtk
 import sys
 from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 from PyQt5.QtWidgets import QMainWindow, QApplication, QDialog, QFileDialog
-from Mini_app_Qt_VTK import Ui_MainWindow
+# from Mini_app import Ui_MainWindow
 from PyQt5 import Qt
 from PyQt5 import QtCore, QtGui, QtWidgets
 
@@ -33,7 +33,8 @@ class Ui_MainWindow(object):
         MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
         self.pushButton.setText(_translate("MainWindow", "PushButton"))
         
-        
+
+
 class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
@@ -41,7 +42,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.pushButton.clicked.connect(self.OpenVTK)
 
     def OpenVTK(self):
-
         self.vtkWidget = QVTKRenderWindowInteractor(self.frame)
         self.vl = Qt.QVBoxLayout() #I think the mistake might be here..
         self.vl.addWidget(self.vtkWidget)
@@ -73,6 +73,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.show()
         self.iren.Initialize()
         self.iren.Start()
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

@@ -91,7 +91,7 @@ if __name__ == "__main__":
     with open("Mini_app_Qt_VTK.ui") as ui_file:
         with open("Mini_app_Qt_VTK.py", "w") as py_ui_file:
             uic.compileUi(ui_file, py_ui_file)
-            
+
     app = QtWidgets.QApplication(["Application-RTX"])
     main_window = ViewersApp()
     main_window.show()

@@ -17,8 +17,8 @@
    <widget class="QSplitter" name="splitter">
     <property name="geometry">
      <rect>
-      <x>-1</x>
-      <y>-1</y>
+      <x>0</x>
+      <y>0</y>
       <width>801</width>
       <height>561</height>
      </rect>
@@ -48,8 +48,8 @@
      <widget class="QRadioButton" name="radioButton">
       <property name="geometry">
        <rect>
-        <x>80</x>
-        <y>220</y>
+        <x>10</x>
+        <y>50</y>
         <width>131</width>
         <height>30</height>
        </rect>
@@ -61,8 +61,8 @@
      <widget class="QComboBox" name="comboBox">
       <property name="geometry">
        <rect>
-        <x>90</x>
-        <y>120</y>
+        <x>10</x>
+        <y>10</y>
         <width>95</width>
         <height>31</height>
        </rect>
@@ -86,9 +86,9 @@
      <widget class="QSlider" name="Resolution">
       <property name="geometry">
        <rect>
-        <x>80</x>
-        <y>310</y>
-        <width>160</width>
+        <x>10</x>
+        <y>90</y>
+        <width>141</width>
         <height>16</height>
        </rect>
       </property>
