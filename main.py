@@ -2,6 +2,10 @@ import vtk
 from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 from PyQt5 import uic, QtWidgets
 from PyQt5.QtCore import QObject
+from readVTP import *
+import webbrowser
+
+model = "models/nuclear-plant/17491_Nuclear_Cooling_Tower_v1_NEW.obj"
 
 class ViewersApp(QtWidgets.QMainWindow):
     def __init__(self):
@@ -49,10 +53,14 @@ class QMeshViewer(QtWidgets.QFrame):
         mapper = vtk.vtkPolyDataMapper()
         mapper.SetInputConnection(sphereSource.GetOutputPort())
 
+        # Sphere
         actor = vtk.vtkActor()
         actor.SetMapper(mapper)
         actor.GetProperty().SetColor(colors.GetColor3d("Cornsilk"))
         actor.GetProperty().SetRepresentation(0)
+
+        # Powerplant
+        powerplant_actor = actorFromFile()
 
         # renderer = vtk.vtkOpenGLRenderer()
         renderer = vtk.vtkRenderer()
@@ -62,6 +70,7 @@ class QMeshViewer(QtWidgets.QFrame):
         render_window.SetInteractor(interactor)
 
         renderer.AddActor(actor)
+        renderer.AddActor(powerplant_actor)
         renderer.SetBackground(colors.GetColor3d("DarkGreen"))
 
         self.render_window = render_window
