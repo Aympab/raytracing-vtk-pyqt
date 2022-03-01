@@ -10,7 +10,7 @@ render_window.AddRenderer(renderer)
 interactor = vtk.vtkRenderWindowInteractor()
 interactor.SetRenderWindow(render_window)
 
-for sphere_index in range(2):
+for sphere_index in range(10):
     source = vtk.vtkSphereSource()
     
     x = -5.+10.*np.random.random()
