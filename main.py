@@ -5,7 +5,8 @@ from PyQt5.QtCore import QObject
 from readVTP import *
 import webbrowser
 
-model = "models/nuclear-plant/17491_Nuclear_Cooling_Tower_v1_NEW.obj"
+model = "models/nuclear-plant/Nuclear_Cooling_Tower.obj"
+scene = "models/naboo/naboo_complex.obj"
 
 class ViewersApp(QtWidgets.QMainWindow):
     def __init__(self):
@@ -47,7 +48,7 @@ class QMeshViewer(QtWidgets.QFrame):
 
         sphereSource = vtk.vtkSphereSource()
         sphereSource.SetCenter(0.0, 0.0, 0.0)
-        sphereSource.SetRadius(1000)
+        sphereSource.SetRadius(1000.0)
         sphereSource.SetPhiResolution(100)
         sphereSource.SetThetaResolution(100)
 
@@ -60,6 +61,9 @@ class QMeshViewer(QtWidgets.QFrame):
         actor.GetProperty().SetColor(colors.GetColor3d("Cornsilk"))
         actor.GetProperty().SetRepresentation(0)
 
+        # Scene
+        naboo_actor = actorFromFile(scene)
+
         # Powerplant
         powerplant_actor = actorFromFile(model)
 
@@ -70,8 +74,9 @@ class QMeshViewer(QtWidgets.QFrame):
         interactor.SetInteractorStyle(vtk.vtkInteractorStyleTrackballCamera())
         render_window.SetInteractor(interactor)
 
-        renderer.AddActor(powerplant_actor)
-        renderer.AddActor(actor)
+        #renderer.AddActor(actor)
+        renderer.AddActor(naboo_actor)
+        #renderer.AddActor(powerplant_actor)
         renderer.SetBackground(colors.GetColor3d("DarkGreen"))
 
         self.render_window = render_window

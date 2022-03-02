@@ -12,9 +12,8 @@ from vtkmodules.vtkRenderingCore import (
     vtkRenderer
 )
 from vtk import vtkOBJReader
-import webbrowser
 
-def get_program_parameters():
+def get_custom_parameters():
     import argparse
     description = 'Read a VTK XML PolyData file.'
     epilogue = ''''''
@@ -68,7 +67,7 @@ def actorFromFile(filename):
 def main():
     colors = vtkNamedColors()
 
-    filename, filetype = get_program_parameters()
+    filename, filetype = get_custom_parameters()
 
     reader = readfile(filename, filetype)
 
