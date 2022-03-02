@@ -27,6 +27,7 @@ class ViewersApp(QtWidgets.QMainWindow):
         self.ui.comboBox.activated.connect(self.vtk_widget.Switch_Mode)
         self.ui.Resolution.valueChanged.connect(self.vtk_widget.set_Resolution)
         self.ui.radioButton.clicked.connect(self.vtk_widget.button_event)
+        self.ui.saveButton.clicked.connect(self.vtk_widget.save_event)
         
     def initialize(self):
         self.vtk_widget.start()
@@ -46,7 +47,7 @@ class QMeshViewer(QtWidgets.QFrame):
 
         sphereSource = vtk.vtkSphereSource()
         sphereSource.SetCenter(0.0, 0.0, 0.0)
-        sphereSource.SetRadius(5.0)
+        sphereSource.SetRadius(1000)
         sphereSource.SetPhiResolution(100)
         sphereSource.SetThetaResolution(100)
 
@@ -60,7 +61,7 @@ class QMeshViewer(QtWidgets.QFrame):
         actor.GetProperty().SetRepresentation(0)
 
         # Powerplant
-        powerplant_actor = actorFromFile()
+        powerplant_actor = actorFromFile(model)
 
         # renderer = vtk.vtkOpenGLRenderer()
         renderer = vtk.vtkRenderer()
@@ -69,8 +70,8 @@ class QMeshViewer(QtWidgets.QFrame):
         interactor.SetInteractorStyle(vtk.vtkInteractorStyleTrackballCamera())
         render_window.SetInteractor(interactor)
 
-        renderer.AddActor(actor)
         renderer.AddActor(powerplant_actor)
+        renderer.AddActor(actor)
         renderer.SetBackground(colors.GetColor3d("DarkGreen"))
 
         self.render_window = render_window
@@ -95,6 +96,9 @@ class QMeshViewer(QtWidgets.QFrame):
         self.sphere.SetPhiResolution(new_value)
         self.sphere.SetThetaResolution(new_value)
         self.render_window.Render()
+        
+    def save_event(self):
+        print("Button pressed ! Saving...")
 
 if __name__ == "__main__":
     with open("Mini_app_Qt_VTK.ui") as ui_file:

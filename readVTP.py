@@ -52,7 +52,6 @@ def actorFromFile(filename):
         filetype = "obj"
     else:
         filetype = "unk"
-    webbrowser.open('https://www.youtube.com/watch?v=eHz9_mTp320')
 
     reader = readfile(filename, filetype)
     mapper = vtkPolyDataMapper()
