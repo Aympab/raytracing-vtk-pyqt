@@ -21,6 +21,11 @@ from vtkmodules.vtkRenderingAnnotation import vtkAxesActor
 model = "models/Nuclear_Power_Plant_v1/10078_Nuclear_Power_Plant_v1_L3.obj"
 # scene = "models/naboo/naboo_complex.obj"
 
+
+light_x = 0.0
+light_y = 0.0
+light_z = 0.0
+
 class ViewersApp(QtWidgets.QMainWindow):
     def __init__(self):
         super(ViewersApp, self).__init__()
@@ -98,49 +103,36 @@ class QMeshViewer(QtWidgets.QFrame):
         ## LIGHT
         self.light1 = vtk.vtkLight()
         self.light1.SetIntensity(0.5)
-        self.light1.SetPosition(1000, 100, 100)
+        self.light1.SetPosition(light_x, light_y, light_z)
         self.light1.SetDiffuseColor(1, 1, 1)
         renderer.AddLight(self.light1)
         
         ## SUN BALL TO SHOW WHERE IS LIGHT
-        sphereSource = vtk.vtkSphereSource()
-        sphereSource.SetCenter(1000, 100, 100)
-        sphereSource.SetRadius(10.0)
-        sphereSource.SetPhiResolution(100)
-        sphereSource.SetThetaResolution(100)
-        mapper = vtk.vtkPolyDataMapper()
-        mapper.SetInputConnection(sphereSource.GetOutputPort())
-
-        actor = vtk.vtkActor()
-        actor.SetMapper(mapper)
-        actor.GetProperty().SetColor(colors.GetColor3d("Yellow"))
-        actor.GetProperty().SetRepresentation(2)
-        # actor.GetProperty().SetOpacity(0.001)
-        renderer.AddActor(actor)
-        self.actor = actor
-
+        self.pSource = [light_x, light_y, light_z]
+        self.sun = addPoint(renderer, self.pSource, color=[1.0, 1.0, 0.0])
 
         self.render_window = render_window
         self.interactor = interactor
         self.renderer = renderer
-        self.sphere = sphereSource
-        self.power_plant = powerplant_actor
+        self.powerplant_actor = powerplant_actor
 
-        pSource = [0.0, -10, 0.0]
-        pTarget = [500.0, 0.0, 200.0]
+        self.pTarget = [500.0, 0.0, 200.0]
         
-        addPoint(renderer, pSource, color=[1.0, 0.0, 0.0])
-        addPoint(renderer, pTarget, color=[0.0, 1.0, 0.0])
-        addLine(renderer, pSource, pTarget)
+        self.cam = addPoint(renderer, self.pTarget, color=[0.0, 1.0, 0.0])
+        # addLine(renderer, self.pSource, self.pTarget)
         # vtk_show(renderer)
         
+        self.renderer = renderer
+        
+
+
     def start(self):
         self.interactor.Initialize()
         self.interactor.Start()
 
     def Switch_Mode(self, new_value):
-        self.actor.GetProperty().SetRepresentation(new_value)
-        self.power_plant.GetProperty().SetRepresentation(new_value)
+        # self.actor.GetProperty().SetRepresentation(new_value)
+        self.powerplant_actor.GetProperty().SetRepresentation(new_value)
         self.render_window.Render()
 
     def button_event(self, new_value):
@@ -156,12 +148,12 @@ class QMeshViewer(QtWidgets.QFrame):
         # else:
             # texture = vtkTexture()
 
-        self.power_plant.SetTexture(texture)
+        self.powerplant_actor.SetTexture(texture)
 
 
     def set_Resolution(self, new_value):
-        self.sphere.SetPhiResolution(new_value)
-        self.sphere.SetThetaResolution(new_value)
+        # self.sphere.SetPhiResolution(new_value)
+        # self.sphere.SetThetaResolution(new_value)
         
         # self.power_plant.SetPosition(new_value, new_value, new_value)
         # self.light1.SetIntensity(new_value)
@@ -173,7 +165,11 @@ class QMeshViewer(QtWidgets.QFrame):
         z = self.light1.GetPosition()[2]
         
         self.light1.SetPosition(new_value, y, z)
-        self.sphere.SetCenter(new_value, y, z)
+        self.sun.SetCenter(new_value, y, z)
+        
+        self.pSource = [new_value, y, z]
+        addLine(self.renderer, self.pSource, self.pTarget)
+
         self.render_window.Render()
         
         
@@ -182,7 +178,11 @@ class QMeshViewer(QtWidgets.QFrame):
         z = self.light1.GetPosition()[2]
         
         self.light1.SetPosition(x, new_value, z)
-        self.sphere.SetCenter(x, new_value, z)
+        self.sun.SetCenter(x, new_value, z)
+        
+        self.pSource = [x, new_value, z]
+        addLine(self.renderer, self.pSource, self.pTarget)
+        
         self.render_window.Render()
         
     def light_pos_z(self, new_value):
@@ -190,7 +190,11 @@ class QMeshViewer(QtWidgets.QFrame):
         y = self.light1.GetPosition()[1]
         
         self.light1.SetPosition(x, y, new_value)
-        self.sphere.SetCenter(x, y, new_value)
+        self.sun.SetCenter(x, y, new_value)
+        
+        self.pSource = [x, y, new_value]
+        addLine(self.renderer, self.pSource, self.pTarget)
+        
         self.render_window.Render()
         
     def light_intensity(self, new_value):
