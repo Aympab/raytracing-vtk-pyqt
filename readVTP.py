@@ -11,7 +11,7 @@ from vtkmodules.vtkRenderingCore import (
     vtkRenderWindowInteractor,
     vtkRenderer
 )
-from vtk import vtkOBJReader
+from vtk import vtkOBJReader, vtkSTLReader
 
 def get_custom_parameters():
     import argparse
@@ -44,7 +44,7 @@ def readfile(filename, filetype):
     return reader
 
 
-def actorFromFile(filename):
+def modelFromFile(filename):
     if filename[-3:] == "vtp":
         filetype = "vtp"
     elif filename[-3:] == "obj":
@@ -62,7 +62,40 @@ def actorFromFile(filename):
     actor.SetMapper(mapper)
     actor.GetProperty().SetColor(colors.GetColor3d('Tan'))
 
-    return actor
+    return mapper, actor
+
+def loadOBJ(filenameOBJ):
+    readerOBJ = vtkOBJReader()
+    readerOBJ.SetFileName(filenameOBJ)
+    # 'update' the reader i.e. read the .OBJ file
+    readerOBJ.Update()
+
+    polydata = readerOBJ.GetOutput()
+
+    # If there are no points in 'vtkPolyData' something went wrong
+    if polydata.GetNumberOfPoints() == 0:
+        raise ValueError(
+            "No point data could be loaded from '" + filenameOBJ)
+        return None
+    
+    return polydata
+
+def loadSTL(filenameSTL):
+    readerSTL = vtkSTLReader()
+    readerSTL.SetFileName(filenameSTL)
+    # 'update' the reader i.e. read the .stl file
+    readerSTL.Update()
+
+    polydata = readerSTL.GetOutput()
+
+    # If there are no points in 'vtkPolyData' something went wrong
+    if polydata.GetNumberOfPoints() == 0:
+        raise ValueError(
+            "No point data could be loaded from '" + filenameSTL)
+        return None
+    
+    return polydata
+
 
 def main():
     colors = vtkNamedColors()

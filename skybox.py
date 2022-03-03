@@ -187,7 +187,7 @@ def main():
     # Turn off the default lighting and use image based lighting.
     renderer.AutomaticLightCreationOff()
     renderer.UseImageBasedLightingOn()
-    #renderer.SetEnvironmentTexture(skybox)
+    renderer.SetEnvironmentTexture(skybox)
     renderer.SetBackground(colors.GetColor3d('BkgColor'))
     renderer.UseSphericalHarmonicsOff()
 
@@ -295,15 +295,15 @@ def main():
     actor2.SetPosition(2,2,0)
 
 
-    #skybox_actor = vtkSkybox()
-    #skybox_actor.SetTexture(skybox)
-    #skybox_actor.GammaCorrectOn()
+    skybox_actor = vtkSkybox()
+    skybox_actor.SetTexture(skybox)
+    skybox_actor.GammaCorrectOn()
 
-    #renderer = add_SSAO(renderer)
+    renderer = add_SSAO(renderer)
     renderer.AddActor(actor2)
     renderer.AddActor(actor)
     # Comment out if you don't want a skybox.
-    #renderer.AddActor(skybox_actor)
+    renderer.AddActor(skybox_actor)
 
     render_window.SetSize(800, 500)
     render_window.Render()
@@ -549,7 +549,8 @@ def get_torus():
 
 
 def get_sphere(theta_resolution=500, phi_resolution = 500):
-    surface = vtkTexturedSphereSource()
+    # surface = vtkTexturedSphereSource()
+    surface = vtk.vtkSphereSource()
     surface.SetThetaResolution(theta_resolution)
     surface.SetPhiResolution(phi_resolution)
 
