@@ -22,9 +22,9 @@ model = "models/Nuclear_Power_Plant_v1/10078_Nuclear_Power_Plant_v1_L3.obj"
 # scene = "models/naboo/naboo_complex.obj"
 
 
-light_x = 0.0
-light_y = 0.0
-light_z = 0.0
+light_x = 100.0
+light_y = 100.0
+light_z = 100.0
 
 class ViewersApp(QtWidgets.QMainWindow):
     def __init__(self):
@@ -119,6 +119,7 @@ class QMeshViewer(QtWidgets.QFrame):
         self.pTarget = [500.0, 0.0, 200.0]
         
         self.cam = addPoint(renderer, self.pTarget, color=[0.0, 1.0, 0.0])
+        self.line = addLine(renderer, self.pSource, self.pTarget)
         # addLine(renderer, self.pSource, self.pTarget)
         # vtk_show(renderer)
         
@@ -168,7 +169,8 @@ class QMeshViewer(QtWidgets.QFrame):
         self.sun.SetCenter(new_value, y, z)
         
         self.pSource = [new_value, y, z]
-        addLine(self.renderer, self.pSource, self.pTarget)
+        self.line.SetPoint1(self.pSource)
+        # addLine(self.renderer, self.pSource, self.pTarget)
 
         self.render_window.Render()
         
@@ -181,7 +183,8 @@ class QMeshViewer(QtWidgets.QFrame):
         self.sun.SetCenter(x, new_value, z)
         
         self.pSource = [x, new_value, z]
-        addLine(self.renderer, self.pSource, self.pTarget)
+        self.line.SetPoint1(self.pSource)
+        # addLine(self.renderer, self.pSource, self.pTarget)
         
         self.render_window.Render()
         
@@ -193,7 +196,8 @@ class QMeshViewer(QtWidgets.QFrame):
         self.sun.SetCenter(x, y, new_value)
         
         self.pSource = [x, y, new_value]
-        addLine(self.renderer, self.pSource, self.pTarget)
+        self.line.SetPoint1(self.pSource)
+        # addLine(self.renderer, self.pSource, self.pTarget)
         
         self.render_window.Render()
         

@@ -17,6 +17,8 @@ def addLine(renderer, p1, p2, color=[0.0, 0.0, 1.0]):
 
     renderer.AddActor(actor)
     
+    return line
+    
 def addPoint(renderer, p, radius=5.0, color=[0.0, 0.0, 0.0]):
     point = vtk.vtkSphereSource()
     point.SetCenter(p)
