@@ -62,7 +62,7 @@ def modelFromFile(filename):
     actor.SetMapper(mapper)
     actor.GetProperty().SetColor(colors.GetColor3d('Tan'))
 
-    return mapper, actor
+    return reader, actor
 
 def loadOBJ(filenameOBJ):
     readerOBJ = vtkOBJReader()

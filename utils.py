@@ -2,6 +2,19 @@ from vtkmodules.vtkRenderingCore import vtkTexture
 from vtkmodules.vtkIOImage import vtkImageReader2Factory
 from vtkmodules.vtkImagingCore import vtkImageFlip
 import vtk
+from vtkmodules.vtkRenderingAnnotation import vtkAxesActor
+
+def MakeAxesActor():
+    axes = vtkAxesActor()
+    axes.SetShaftTypeToCylinder()
+    axes.SetXAxisLabelText('X')
+    axes.SetYAxisLabelText('Y')
+    axes.SetZAxisLabelText('Z')
+    axes.SetTotalLength(100.0, 100.0, 100.0)
+    axes.SetCylinderRadius(0.5 * axes.GetCylinderRadius())
+    axes.SetConeRadius(1.025 * axes.GetConeRadius())
+    axes.SetSphereRadius(1.5 * axes.GetSphereRadius())
+    return axes
 
 def addLine(renderer, p1, p2, color=[0.0, 0.0, 1.0]):
     line = vtk.vtkLineSource()

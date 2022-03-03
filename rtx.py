@@ -11,20 +11,23 @@ from vtkmodules.vtkRenderingCore import (
     vtkRenderWindow,
     vtkRenderWindowInteractor,
     vtkSkybox,
+    vtkCamera,
     vtkTexture
 )
+from vtkmodules.vtkInteractionWidgets import vtkOrientationMarkerWidget
 from vtk import vtkPNGReader, vtkJPEGReader, vtkTextureMapToSphere
 from utils import *
 from vtkmodules.vtkCommonTransforms import vtkTransform
 from vtkmodules.vtkRenderingAnnotation import vtkAxesActor
+from vtkmodules.vtkFiltersModeling import vtkOutlineFilter
 
 model = "models/Nuclear_Power_Plant_v1/10078_Nuclear_Power_Plant_v1_L3.obj"
 # scene = "models/naboo/naboo_complex.obj"
 
 
-light_x = 100.0
-light_y = 100.0
-light_z = 100.0
+light_x = 0.0
+light_y = 50.0
+light_z = 50.0
 
 class ViewersApp(QtWidgets.QMainWindow):
     def __init__(self):
@@ -66,44 +69,46 @@ class QMeshViewer(QtWidgets.QFrame):
         self.layout.setContentsMargins(0,0,0,0)
         self.setLayout(self.layout)
         
-        #https://lorensen.github.io/VTKExamples/site/Python/GeometricObjects/Sphere
         colors = vtk.vtkNamedColors()
 
-
-
-
-
-        # Scene
-        # naboo_actor = actorFromFile(scene)
-
-        # Powerplant
-        powerplant_mapper, powerplant_actor = modelFromFile(model)
-
-        # renderer = vtk.vtkOpenGLRenderer()
         renderer = vtk.vtkRenderer()
         render_window = interactor.GetRenderWindow()
         render_window.AddRenderer(renderer)
         interactor.SetInteractorStyle(vtk.vtkInteractorStyleTrackballCamera())
         render_window.SetInteractor(interactor)
+        # render_window.SetSize(512, 512)
+        interactor.SetRenderWindow(render_window)
+        renderer.SetBackground(colors.GetColor3d("DarkGreen"))
+        # renderer.SetBackground(colors.GetColor3d("AliceBlue"))
 
+        # Set up a nice camera position.
+        # camera = vtkCamera()
+        # camera.SetPosition(100, -21.0, 30.8)
+        # camera.SetFocalPoint(0.0, 0.0, 0.0)
+        # camera.SetClippingRange(3.2, 10.2)
+        # camera.SetViewUp(0.3, 1.0, 0.13)
+        # renderer.SetActiveCamera(camera)
 
         transform = vtkTransform()
         transform.Translate(1.0, 0.0, 0.0)
 
-        axes = vtkAxesActor()
-        #  The axes are positioned with a user transform
-        axes.SetUserTransform(transform)
+
         
-        renderer.AddActor(axes)
+        # renderer.AddActor(axes)
         #renderer.AddActor(actor)
         # renderer.AddActor(naboo_actor)
+
+        ## POWERPLANT
+        powerplant_reader, powerplant_actor = modelFromFile(model)
         renderer.AddActor(powerplant_actor)
-        renderer.SetBackground(colors.GetColor3d("DarkGreen"))
+        self.powerplant_actor = powerplant_actor
+
 
         ## LIGHT
         self.light1 = vtk.vtkLight()
         self.light1.SetIntensity(0.5)
         self.light1.SetPosition(light_x, light_y, light_z)
+        self.light1.SetLightType(2)
         self.light1.SetDiffuseColor(1, 1, 1)
         renderer.AddLight(self.light1)
         
@@ -114,9 +119,8 @@ class QMeshViewer(QtWidgets.QFrame):
         self.render_window = render_window
         self.interactor = interactor
         self.renderer = renderer
-        self.powerplant_actor = powerplant_actor
 
-        self.pTarget = [500.0, 0.0, 200.0]
+        self.pTarget = [10.0, 0.0, 10.0]
         
         self.cam = addPoint(renderer, self.pTarget, color=[0.0, 1.0, 0.0])
         self.line = addLine(renderer, self.pSource, self.pTarget)
@@ -124,8 +128,6 @@ class QMeshViewer(QtWidgets.QFrame):
         # vtk_show(renderer)
         
         self.renderer = renderer
-        
-
 
     def start(self):
         self.interactor.Initialize()
