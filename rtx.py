@@ -14,8 +14,11 @@ from vtkmodules.vtkRenderingCore import (
     vtkTexture
 )
 from vtk import vtkPNGReader, vtkJPEGReader, vtkTextureMapToSphere
-# models/Nuclear_Power_Plant_v1/10078_Nuclear_Power_Plant_v1_L3.obj
-model = "models/nuclear-plant/Nuclear_Cooling_Tower.obj"
+from utils import *
+from vtkmodules.vtkCommonTransforms import vtkTransform
+from vtkmodules.vtkRenderingAnnotation import vtkAxesActor
+
+model = "models/Nuclear_Power_Plant_v1/10078_Nuclear_Power_Plant_v1_L3.obj"
 # scene = "models/naboo/naboo_complex.obj"
 
 class ViewersApp(QtWidgets.QMainWindow):
@@ -61,26 +64,15 @@ class QMeshViewer(QtWidgets.QFrame):
         #https://lorensen.github.io/VTKExamples/site/Python/GeometricObjects/Sphere
         colors = vtk.vtkNamedColors()
 
-        sphereSource = vtk.vtkSphereSource()
-        sphereSource.SetCenter(0.0, 0.0, 0.0)
-        sphereSource.SetRadius(1000.0)
-        sphereSource.SetPhiResolution(100)
-        sphereSource.SetThetaResolution(100)
 
-        mapper = vtk.vtkPolyDataMapper()
-        mapper.SetInputConnection(sphereSource.GetOutputPort())
 
-        # Sphere
-        actor = vtk.vtkActor()
-        actor.SetMapper(mapper)
-        actor.GetProperty().SetColor(colors.GetColor3d("Cornsilk"))
-        actor.GetProperty().SetRepresentation(0)
+
 
         # Scene
         # naboo_actor = actorFromFile(scene)
 
         # Powerplant
-        _, powerplant_actor = modelFromFile(model)
+        powerplant_mapper, powerplant_actor = modelFromFile(model)
 
         # renderer = vtk.vtkOpenGLRenderer()
         renderer = vtk.vtkRenderer()
@@ -89,26 +81,58 @@ class QMeshViewer(QtWidgets.QFrame):
         interactor.SetInteractorStyle(vtk.vtkInteractorStyleTrackballCamera())
         render_window.SetInteractor(interactor)
 
+
+        transform = vtkTransform()
+        transform.Translate(1.0, 0.0, 0.0)
+
+        axes = vtkAxesActor()
+        #  The axes are positioned with a user transform
+        axes.SetUserTransform(transform)
+        
+        renderer.AddActor(axes)
         #renderer.AddActor(actor)
         # renderer.AddActor(naboo_actor)
         renderer.AddActor(powerplant_actor)
         renderer.SetBackground(colors.GetColor3d("DarkGreen"))
 
+        ## LIGHT
         self.light1 = vtk.vtkLight()
         self.light1.SetIntensity(0.5)
         self.light1.SetPosition(1000, 100, 100)
         self.light1.SetDiffuseColor(1, 1, 1)
         renderer.AddLight(self.light1)
         
+        ## SUN BALL TO SHOW WHERE IS LIGHT
+        sphereSource = vtk.vtkSphereSource()
+        sphereSource.SetCenter(1000, 100, 100)
+        sphereSource.SetRadius(10.0)
+        sphereSource.SetPhiResolution(100)
+        sphereSource.SetThetaResolution(100)
+        mapper = vtk.vtkPolyDataMapper()
+        mapper.SetInputConnection(sphereSource.GetOutputPort())
+
+        actor = vtk.vtkActor()
+        actor.SetMapper(mapper)
+        actor.GetProperty().SetColor(colors.GetColor3d("Yellow"))
+        actor.GetProperty().SetRepresentation(2)
+        # actor.GetProperty().SetOpacity(0.001)
+        renderer.AddActor(actor)
+        self.actor = actor
+
+
         self.render_window = render_window
         self.interactor = interactor
         self.renderer = renderer
         self.sphere = sphereSource
-
         self.power_plant = powerplant_actor
 
-
-        self.actor = actor
+        pSource = [0.0, -10, 0.0]
+        pTarget = [500.0, 0.0, 200.0]
+        
+        addPoint(renderer, pSource, color=[1.0, 0.0, 0.0])
+        addPoint(renderer, pTarget, color=[0.0, 1.0, 0.0])
+        addLine(renderer, pSource, pTarget)
+        # vtk_show(renderer)
         
     def start(self):
         self.interactor.Initialize()
@@ -149,13 +173,16 @@ class QMeshViewer(QtWidgets.QFrame):
         z = self.light1.GetPosition()[2]
         
         self.light1.SetPosition(new_value, y, z)
+        self.sphere.SetCenter(new_value, y, z)
         self.render_window.Render()
+        
         
     def light_pos_y(self, new_value):
         x = self.light1.GetPosition()[0]
         z = self.light1.GetPosition()[2]
         
         self.light1.SetPosition(x, new_value, z)
+        self.sphere.SetCenter(x, new_value, z)
         self.render_window.Render()
         
     def light_pos_z(self, new_value):
@@ -163,6 +190,7 @@ class QMeshViewer(QtWidgets.QFrame):
         y = self.light1.GetPosition()[1]
         
         self.light1.SetPosition(x, y, new_value)
+        self.sphere.SetCenter(x, y, new_value)
         self.render_window.Render()
         
     def light_intensity(self, new_value):

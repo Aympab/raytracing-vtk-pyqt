@@ -1,7 +1,38 @@
 from vtkmodules.vtkRenderingCore import vtkTexture
 from vtkmodules.vtkIOImage import vtkImageReader2Factory
 from vtkmodules.vtkImagingCore import vtkImageFlip
+import vtk
 
+def addLine(renderer, p1, p2, color=[0.0, 0.0, 1.0]):
+    line = vtk.vtkLineSource()
+    line.SetPoint1(p1)
+    line.SetPoint2(p2)
+
+    mapper = vtk.vtkPolyDataMapper()
+    mapper.SetInputConnection(line.GetOutputPort())
+
+    actor = vtk.vtkActor()
+    actor.SetMapper(mapper)
+    actor.GetProperty().SetColor(color)
+
+    renderer.AddActor(actor)
+    
+def addPoint(renderer, p, radius=1.0, color=[0.0, 0.0, 0.0]):
+    point = vtk.vtkSphereSource()
+    point.SetCenter(p)
+    point.SetRadius(radius)
+    point.SetPhiResolution(100)
+    point.SetThetaResolution(100)
+
+    mapper = vtk.vtkPolyDataMapper()
+    mapper.SetInputConnection(point.GetOutputPort())
+
+    actor = vtk.vtkActor()
+    actor.SetMapper(mapper)
+    actor.GetProperty().SetColor(color)
+
+    renderer.AddActor(actor)
+    
 def read_cubemap(folder_root, file_names):
     """
     Read six images forming a cubemap.
