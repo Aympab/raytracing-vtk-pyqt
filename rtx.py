@@ -81,28 +81,23 @@ class QMeshViewer(QtWidgets.QFrame):
         renderer.SetBackground(colors.GetColor3d("DarkGreen"))
         # renderer.SetBackground(colors.GetColor3d("AliceBlue"))
 
-        # Set up a nice camera position.
-        # camera = vtkCamera()
-        # camera.SetPosition(100, -21.0, 30.8)
-        # camera.SetFocalPoint(0.0, 0.0, 0.0)
-        # camera.SetClippingRange(3.2, 10.2)
-        # camera.SetViewUp(0.3, 1.0, 0.13)
-        # renderer.SetActiveCamera(camera)
-
         transform = vtkTransform()
         transform.Translate(1.0, 0.0, 0.0)
 
 
-        
-        # renderer.AddActor(axes)
-        #renderer.AddActor(actor)
-        # renderer.AddActor(naboo_actor)
-
         ## POWERPLANT
-        powerplant_reader, powerplant_actor = modelFromFile(model)
-        renderer.AddActor(powerplant_actor)
-        self.powerplant_actor = powerplant_actor
+        # powerplant_reader, powerplant_actor = modelFromFile(model)  #the next lines do exactly what is in modelFromFile function but if we don't do this we cannot access stuff
+        powerplant_reader = readfile(model, 'obj')
+        pp_mapper = vtkPolyDataMapper()
+        pp_mapper.SetInputConnection(powerplant_reader.GetOutputPort())
+        colors = vtkNamedColors()
 
+        pp_actor = vtkActor()
+        pp_actor.SetMapper(pp_mapper)
+        pp_actor.GetProperty().SetColor(colors.GetColor3d('AliceBlue'))
+
+        renderer.AddActor(pp_actor)
+        self.powerplant_actor = pp_actor
 
         ## LIGHT
         self.light1 = vtk.vtkLight()
@@ -119,13 +114,15 @@ class QMeshViewer(QtWidgets.QFrame):
         self.render_window = render_window
         self.interactor = interactor
         self.renderer = renderer
-
         self.pTarget = [10.0, 0.0, 10.0]
-        
         self.cam = addPoint(renderer, self.pTarget, color=[0.0, 1.0, 0.0])
         self.line = addLine(renderer, self.pSource, self.pTarget)
-        # addLine(renderer, self.pSource, self.pTarget)
-        # vtk_show(renderer)
+
+
+        self.obbTree = vtk.vtkOBBTree()
+        self.obbTree.SetDataSet(powerplant_reader.GetOutput())
+        self.obbTree.BuildLocator()
+        
         
         self.renderer = renderer
 
@@ -163,6 +160,20 @@ class QMeshViewer(QtWidgets.QFrame):
         
         self.render_window.Render()
 
+    def intersect(self):
+        pointsVTKintersection = vtk.vtkPoints()
+        code = self.obbTree.IntersectWithLine(self.pSource, self.pTarget, pointsVTKintersection, None) #None for CellID but we will need this info later
+
+        pointsVTKIntersectionData = pointsVTKintersection.GetData()
+        noPointsVTKIntersection = pointsVTKIntersectionData.GetNumberOfTuples()
+        pointsIntersection = []
+        for idx in range(noPointsVTKIntersection):
+            _tup = pointsVTKIntersectionData.GetTuple3(idx)
+            pointsIntersection.append(_tup)
+
+        for p in pointsIntersection:
+            addPoint(self.renderer, p, color=[0.0, 0.0, 1.0])
+
     def light_pos_x(self, new_value):
         y = self.light1.GetPosition()[1]
         z = self.light1.GetPosition()[2]
@@ -173,6 +184,8 @@ class QMeshViewer(QtWidgets.QFrame):
         self.pSource = [new_value, y, z]
         self.line.SetPoint1(self.pSource)
         # addLine(self.renderer, self.pSource, self.pTarget)
+
+        self.intersect()
 
         self.render_window.Render()
         
@@ -188,6 +201,8 @@ class QMeshViewer(QtWidgets.QFrame):
         self.line.SetPoint1(self.pSource)
         # addLine(self.renderer, self.pSource, self.pTarget)
         
+        self.intersect()
+        
         self.render_window.Render()
         
     def light_pos_z(self, new_value):
@@ -200,6 +215,8 @@ class QMeshViewer(QtWidgets.QFrame):
         self.pSource = [x, y, new_value]
         self.line.SetPoint1(self.pSource)
         # addLine(self.renderer, self.pSource, self.pTarget)
+        
+        self.intersect()
         
         self.render_window.Render()
         

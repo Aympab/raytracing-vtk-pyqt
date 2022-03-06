@@ -62,7 +62,7 @@ def modelFromFile(filename):
     actor.SetMapper(mapper)
     actor.GetProperty().SetColor(colors.GetColor3d('Tan'))
 
-    return reader, actor
+    return mapper, actor
 
 def loadOBJ(filenameOBJ):
     readerOBJ = vtkOBJReader()
@@ -78,7 +78,7 @@ def loadOBJ(filenameOBJ):
             "No point data could be loaded from '" + filenameOBJ)
         return None
     
-    return polydata
+    return readerOBJ.GetOutputPort()
 
 def loadSTL(filenameSTL):
     readerSTL = vtkSTLReader()

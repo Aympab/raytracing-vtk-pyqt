@@ -43,7 +43,7 @@ def main():
     source.SetCenter(0, 0, 0)
     source.SetRadius(1000)
     # Use the golden ratio for the height. Because we can!
-    source.SetHeight(1.6180339887498948482)
+    source.SetHeight(1000*1.6180339887498948482)
     source.SetResolution(128)
     source.Update()
 
