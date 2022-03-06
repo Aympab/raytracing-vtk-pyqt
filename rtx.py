@@ -25,6 +25,9 @@ model = "models/Nuclear_Power_Plant_v1/10078_Nuclear_Power_Plant_v1_L3.obj"
 # scene = "models/naboo/naboo_complex.obj"
 
 
+#TODO : Rename pSource en pLight
+#TODO : AddPoint en AddSphere
+
 light_x = 0.0
 light_y = 50.0
 light_z = 50.0
@@ -81,12 +84,10 @@ class QMeshViewer(QtWidgets.QFrame):
         renderer.SetBackground(colors.GetColor3d("DarkGreen"))
         # renderer.SetBackground(colors.GetColor3d("AliceBlue"))
 
-        transform = vtkTransform()
-        transform.Translate(1.0, 0.0, 0.0)
-
 
         ## POWERPLANT
-        # powerplant_reader, powerplant_actor = modelFromFile(model)  #the next lines do exactly what is in modelFromFile function but if we don't do this we cannot access stuff
+        # powerplant_reader, powerplant_actor = modelFromFile(model)  
+        # #the next lines do exactly what is in modelFromFile function but if we don't do this we cannot access stuff
         powerplant_reader = readfile(model, 'obj')
         pp_mapper = vtkPolyDataMapper()
         pp_mapper.SetInputConnection(powerplant_reader.GetOutputPort())
@@ -103,7 +104,7 @@ class QMeshViewer(QtWidgets.QFrame):
         self.light1 = vtk.vtkLight()
         self.light1.SetIntensity(0.5)
         self.light1.SetPosition(light_x, light_y, light_z)
-        self.light1.SetLightType(2)
+        # self.light1.SetLightType(2)
         self.light1.SetDiffuseColor(1, 1, 1)
         renderer.AddLight(self.light1)
         
@@ -114,7 +115,8 @@ class QMeshViewer(QtWidgets.QFrame):
         self.render_window = render_window
         self.interactor = interactor
         self.renderer = renderer
-        self.pTarget = [10.0, 0.0, 10.0]
+        
+        self.pTarget = [100.0, 10.0, 30.0]
         self.cam = addPoint(renderer, self.pTarget, color=[0.0, 1.0, 0.0])
         self.line = addLine(renderer, self.pSource, self.pTarget)
 
@@ -123,6 +125,8 @@ class QMeshViewer(QtWidgets.QFrame):
         self.obbTree.SetDataSet(powerplant_reader.GetOutput())
         self.obbTree.BuildLocator()
         
+        
+        # self.intersect_list = []
         
         self.renderer = renderer
 
@@ -200,30 +204,30 @@ class QMeshViewer(QtWidgets.QFrame):
         self.pSource = [x, new_value, z]
         self.line.SetPoint1(self.pSource)
         # addLine(self.renderer, self.pSource, self.pTarget)
-        
+
         self.intersect()
-        
+
         self.render_window.Render()
-        
+
     def light_pos_z(self, new_value):
         x = self.light1.GetPosition()[0]
         y = self.light1.GetPosition()[1]
-        
+
         self.light1.SetPosition(x, y, new_value)
         self.sun.SetCenter(x, y, new_value)
-        
+
         self.pSource = [x, y, new_value]
         self.line.SetPoint1(self.pSource)
         # addLine(self.renderer, self.pSource, self.pTarget)
-        
+
         self.intersect()
-        
+
         self.render_window.Render()
         
     def light_intensity(self, new_value):
         self.light1.SetIntensity(new_value/100.)
         self.render_window.Render()
-        
+
 
     def save_event(self):
         print(self.light1.GetFocalPoint())
