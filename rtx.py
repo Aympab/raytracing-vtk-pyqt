@@ -110,14 +110,14 @@ class QMeshViewer(QtWidgets.QFrame):
         
         ## SUN BALL TO SHOW WHERE IS LIGHT
         self.pSource = [light_x, light_y, light_z]
-        self.sun = addPoint(renderer, self.pSource, color=[1.0, 1.0, 0.0])
+        _, self.sun = addPoint(renderer, self.pSource, color=[1.0, 1.0, 0.0])
 
         self.render_window = render_window
         self.interactor = interactor
         self.renderer = renderer
         
         self.pTarget = [100.0, 10.0, 30.0]
-        self.cam = addPoint(renderer, self.pTarget, color=[0.0, 1.0, 0.0])
+        _, self.cam = addPoint(renderer, self.pTarget, color=[0.0, 1.0, 0.0])
         self.line = addLine(renderer, self.pSource, self.pTarget)
 
 
@@ -126,8 +126,8 @@ class QMeshViewer(QtWidgets.QFrame):
         self.obbTree.BuildLocator()
         
         
-        # self.intersect_list = []
-        
+        self.intersect_list = []
+
         self.renderer = renderer
 
     def start(self):
@@ -165,18 +165,37 @@ class QMeshViewer(QtWidgets.QFrame):
         self.render_window.Render()
 
     def intersect(self):
+
         pointsVTKintersection = vtk.vtkPoints()
         code = self.obbTree.IntersectWithLine(self.pSource, self.pTarget, pointsVTKintersection, None) #None for CellID but we will need this info later
 
         pointsVTKIntersectionData = pointsVTKintersection.GetData()
         noPointsVTKIntersection = pointsVTKIntersectionData.GetNumberOfTuples()
-        pointsIntersection = []
+        
+        # self.intersect_list = []
+        current_position_list = []
+        
         for idx in range(noPointsVTKIntersection):
             _tup = pointsVTKIntersectionData.GetTuple3(idx)
-            pointsIntersection.append(_tup)
+            current_position_list.append(_tup)
+            
+        if(noPointsVTKIntersection != len(self.intersect_list)):
+            if(noPointsVTKIntersection < len(self.intersect_list)):
+                for (a, _) in self.intersect_list :
+                    self.renderer.RemoveActor(a)
+                self.intersect_list.clear() #we clear the array
 
-        for p in pointsIntersection:
-            addPoint(self.renderer, p, color=[0.0, 0.0, 1.0])
+            for p in current_position_list:
+                self.intersect_list.append(addPoint(self.renderer, p, radius=2.0, color=[0.0, 0.0, 1.0]))
+                    
+        else:
+            # print("Same number of points")
+            for (_, point), pos in zip(self.intersect_list, current_position_list) :
+                point.SetCenter(pos)
+        
+
+
+
 
     def light_pos_x(self, new_value):
         y = self.light1.GetPosition()[1]

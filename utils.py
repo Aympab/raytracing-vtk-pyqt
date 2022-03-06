@@ -48,7 +48,7 @@ def addPoint(renderer, p, radius=5.0, color=[0.0, 0.0, 0.0]):
 
     renderer.AddActor(actor)
     
-    return point
+    return actor, point
 
 def read_cubemap(folder_root, file_names):
     """
