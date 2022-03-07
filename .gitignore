@@ -1,1 +1,7 @@
 __pycache__
+rapport.aux
+rapport.fdb_latexmk
+rapport.log
+rapport.out
+rapport.fls
+rapport.synctex.gz
