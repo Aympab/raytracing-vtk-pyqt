@@ -39,7 +39,6 @@ light_y = 50.0
 light_z = 50.0
 sun_resolution = 6
 sun_color = [1.0, 1.0, 0.0]
-_sunOffset = 10.0
 
 class ViewersApp(QtWidgets.QMainWindow):
     def __init__(self):
@@ -119,7 +118,8 @@ class QMeshViewer(QtWidgets.QFrame):
         ## LIGHT
         self.light = vtk.vtkLight()
         self.light.SetIntensity(0.5)
-        self.light.SetPosition(light_x, light_y, light_z)
+        self.pos_Light = [light_x, light_y, light_z]
+        self.light.SetPosition(self.pos_Light)
         self.light.SetDiffuseColor(1, 1, 1)
         self.light.SetFocalPoint(0.,0.,0.)
         # self.light.SetConeAngle(90)
@@ -129,13 +129,13 @@ class QMeshViewer(QtWidgets.QFrame):
 
 
         ## sun_ball BALL TO SHOW WHERE IS LIGHT
-        self.pos_Light = [light_x, light_y, light_z]
         sun_actor, self.sun_ball = addPoint(self.renderer, self.pos_Light, color=sun_color)
         self.sun_ball.SetPhiResolution(sun_resolution)
         self.sun_ball.SetThetaResolution(sun_resolution)
         # self.sun_ball.SetStartPhi(90) #to cut half a sphere
         sun_actor.GetProperty().EdgeVisibilityOn()  # show edges/wireframe
         sun_actor.GetProperty().SetEdgeColor([0.,0.,0.])  
+        self.sunOffset = 0.0
         
         
         # _, test = addPoint(self.renderer, self.pos_Light, color=[1.0, 1.0, 0.0])
@@ -283,10 +283,14 @@ class QMeshViewer(QtWidgets.QFrame):
 
     def previewShadows(self, new_value):
         #SHADOWS
-        # self.render_window.SetMultiSamples(0)
+        # self.render_window.SetMultiSamples(0) dunno but no need and it works
         if new_value :
+            #we remove the line actor so we can display shadows
             self.renderer.RemoveActor(self.line_actor)
-
+            
+            #we add an offset to the light pos or else we have
+            #the shadows of the sun's normals (arrows on the sphere)
+            self.sunOffset = 10 
 
             shadows = vtkShadowMapPass()
             seq = vtkSequencePass()
@@ -303,6 +307,7 @@ class QMeshViewer(QtWidgets.QFrame):
         else :
             self.renderer.AddActor(self.line_actor)
             self.renderer.SetPass(None)
+            self.sunOffset = 0.0
 
         self.render_window.Render()
 
@@ -318,7 +323,7 @@ class QMeshViewer(QtWidgets.QFrame):
         z = self.light.GetPosition()[2]
         
         self.light.SetPosition(new_value, y, z)
-        self.sun_ball.SetCenter(new_value, y, z+_sunOffset)
+        self.sun_ball.SetCenter(new_value, y, z+self.sunOffset)
         
         self.pos_Light = [new_value, y, z]
         self.line.SetPoint1(self.pos_Light)
@@ -332,7 +337,7 @@ class QMeshViewer(QtWidgets.QFrame):
         z = self.light.GetPosition()[2]
         
         self.light.SetPosition(x, new_value, z)
-        self.sun_ball.SetCenter(x, new_value, z+_sunOffset)
+        self.sun_ball.SetCenter(x, new_value, z+self.sunOffset)
         
         self.pos_Light = [x, new_value, z]
         self.line.SetPoint1(self.pos_Light)
@@ -346,7 +351,7 @@ class QMeshViewer(QtWidgets.QFrame):
         y = self.light.GetPosition()[1]
 
         self.light.SetPosition(x, y, new_value)
-        self.sun_ball.SetCenter(x, y, new_value+_sunOffset)
+        self.sun_ball.SetCenter(x, y, new_value+self.sunOffset)
 
         self.pos_Light = [x, y, new_value]
         self.line.SetPoint1(self.pos_Light)
