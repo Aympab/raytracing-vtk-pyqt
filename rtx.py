@@ -160,6 +160,27 @@ class QMeshViewer(QtWidgets.QFrame):
         self.obbTree.SetDataSet(powerplant_reader.GetOutput())
         self.obbTree.BuildLocator()
 
+
+        self.render_window.SetMultiSamples(0)
+
+        shadows = vtkShadowMapPass()
+
+        seq = vtkSequencePass()
+
+        passes = vtkRenderPassCollection()
+        passes.AddItem(shadows.GetShadowMapBakerPass())
+        passes.AddItem(shadows)
+        seq.SetPasses(passes)
+
+        cameraP = vtkCameraPass()
+        cameraP.SetDelegatePass(seq)
+
+        # Tell the renderer to use our render pass pipeline
+        
+        self.renderer.SetPass(cameraP)
+
+        self.render_window.Render()
+
         self.intersect_list = []
 
 ################################################################################
