@@ -32,11 +32,14 @@ model = "models/Nuclear_Power_Plant_v1/10078_Nuclear_Power_Plant_v1_L3.obj"
 # scene = "models/naboo/naboo_complex.obj"
 
 #TODO : changer la StartTheta ou StartPhi pour que la sphere sun pointe tjrs vers sont focal point ca serait insane
+#TODO : add a comboBox with colors name to change diffuse color light
 
 light_x = 0.0
 light_y = 50.0
 light_z = 50.0
 sun_resolution = 6
+sun_color = [1.0, 1.0, 0.0]
+_sunOffset = 10.0
 
 class ViewersApp(QtWidgets.QMainWindow):
     def __init__(self):
@@ -66,6 +69,7 @@ class ViewersApp(QtWidgets.QMainWindow):
         self.ui.light_coneAngle.valueChanged.connect(self.vtk_widget.light_coneAngle)
         self.ui.light_focalPoint.clicked.connect(self.vtk_widget.light_focalPointFollow)
         self.ui.light_focalPoint_button.clicked.connect(self.vtk_widget.light_focalPoint)
+        self.ui.rb_PreviewShadows.clicked.connect(self.vtk_widget.previewShadows)
         
         self.ui.cameraPos_x.valueChanged.connect(self.vtk_widget.cam_pos_x)
         self.ui.cameraPos_y.valueChanged.connect(self.vtk_widget.cam_pos_y)
@@ -116,11 +120,9 @@ class QMeshViewer(QtWidgets.QFrame):
         self.light = vtk.vtkLight()
         self.light.SetIntensity(0.5)
         self.light.SetPosition(light_x, light_y, light_z)
-        # self.light.SetLightType(2)
         self.light.SetDiffuseColor(1, 1, 1)
         self.light.SetFocalPoint(0.,0.,0.)
         # self.light.SetConeAngle(90)
-        # print(self.light.GetConeAngle())
         self.light.SetPositional(True)
         self.renderer.AddLight(self.light)
         self.followTarget = False #if the camera focal point is on 0,0,0 or on the target
@@ -128,7 +130,7 @@ class QMeshViewer(QtWidgets.QFrame):
 
         ## sun_ball BALL TO SHOW WHERE IS LIGHT
         self.pos_Light = [light_x, light_y, light_z]
-        sun_actor, self.sun_ball = addPoint(self.renderer, self.pos_Light, color=[1.0, 1.0, 0.0])
+        sun_actor, self.sun_ball = addPoint(self.renderer, self.pos_Light, color=sun_color)
         self.sun_ball.SetPhiResolution(sun_resolution)
         self.sun_ball.SetThetaResolution(sun_resolution)
         # self.sun_ball.SetStartPhi(90) #to cut half a sphere
@@ -154,27 +156,60 @@ class QMeshViewer(QtWidgets.QFrame):
 
 
         # # Create a new 'vtkPolyDataNormals' and connect to the 'sun' half-sphere
-        # normalsCalcSun = vtk.vtkPolyDataNormals()
-        # normalsCalcSun.SetInputConnection(self.sun_ball.GetOutputPort())
+        normalsCalcSun = vtk.vtkPolyDataNormals()
+        normalsCalcSun.SetInputConnection(self.sun_ball.GetOutputPort())
 
-        # # Disable normal calculation at cell vertices
-        # normalsCalcSun.ComputePointNormalsOff()
-        # # Enable normal calculation at cell centers
-        # normalsCalcSun.ComputeCellNormalsOn()
-        # # Disable splitting of sharp edges
-        # normalsCalcSun.SplittingOff()
-        # # Disable global flipping of normal orientation
-        # normalsCalcSun.FlipNormalsOff()
-        # # Enable automatic determination of correct normal orientation
-        # normalsCalcSun.AutoOrientNormalsOn()
-        # # Perform calculation
-        # normalsCalcSun.Update()
+        # Disable normal calculation at cell vertices
+        normalsCalcSun.ComputePointNormalsOff()
+        # Enable normal calculation at cell centers
+        normalsCalcSun.ComputeCellNormalsOn()
+        # Disable splitting of sharp edges
+        normalsCalcSun.SplittingOff()
+        # Disable global flipping of normal orientation
+        normalsCalcSun.FlipNormalsOff()
+        # Enable automatic determination of correct normal orientation
+        normalsCalcSun.AutoOrientNormalsOn()
+        # Perform calculation
+        normalsCalcSun.Update()
+        
+        
+        # Create a 'dummy' 'vtkCellCenters' to force the glyphs to the cell-centers
+        dummy_cellCenterCalcSun = vtk.vtkCellCenters()
+        dummy_cellCenterCalcSun.VertexCellsOn()
+        dummy_cellCenterCalcSun.SetInputConnection(normalsCalcSun.GetOutputPort())
+
+        # Create a new 'default' arrow to use as a glyph
+        arrow = vtk.vtkArrowSource()
+
+        # Create a new 'vtkGlyph3D'
+        glyphSun = vtk.vtkGlyph3D()
+        # Set its 'input' as the cell-center normals calculated at the sun's cells
+        glyphSun.SetInputConnection(dummy_cellCenterCalcSun.GetOutputPort())
+        # Set its 'source', i.e., the glyph object, as the 'arrow'
+        glyphSun.SetSourceConnection(arrow.GetOutputPort())
+        # Enforce usage of normals for orientation
+        glyphSun.SetVectorModeToUseNormal()
+        # Set scale for the arrow object
+        glyphSun.SetScaleFactor(5)
+
+        # Create a mapper for all the arrow-glyphs
+        glyphMapperSun = vtk.vtkPolyDataMapper()
+        glyphMapperSun.SetInputConnection(glyphSun.GetOutputPort())
+
+        # Create an actor for the arrow-glyphs
+        glyphActorSun = vtk.vtkActor()
+        glyphActorSun.SetMapper(glyphMapperSun)
+        glyphActorSun.GetProperty().SetColor(sun_color)
+        # Add actor
+        self.renderer.AddActor(glyphActorSun)
+                
         
         
         #Camera (source) object settings, not the actual vtk camera
         self.pos_Camera = [100.0, 10.0, 30.0]
         _, self.cam_ball = addPoint(self.renderer, self.pos_Camera, color=[0.0, 1.0, 0.0])
-        self.line = addLine(self.renderer, self.pos_Light, self.pos_Camera)
+        self.line_actor, self.line = addLine(self.renderer, self.pos_Light, self.pos_Camera)
+        self.renderer.AddActor(self.line_actor) #this doesn't work with shadows
 
         #For the intersections
         self.obbTree = vtk.vtkOBBTree()
@@ -182,24 +217,7 @@ class QMeshViewer(QtWidgets.QFrame):
         self.obbTree.BuildLocator()
 
 
-        #SHADOWS
-        self.render_window.SetMultiSamples(0)
-        shadows = vtkShadowMapPass()
-        seq = vtkSequencePass()
-        passes = vtkRenderPassCollection()
-        passes.AddItem(shadows.GetShadowMapBakerPass())
-        passes.AddItem(shadows)
-        seq.SetPasses(passes)
-
-        cameraP = vtkCameraPass()
-        cameraP.SetDelegatePass(seq)
-
-        # Tell the renderer to use our render pass pipeline
-        
-        self.renderer.SetPass(cameraP)
-
         self.render_window.Render()
-
         self.intersect_list = []
 
 ################################################################################
@@ -263,6 +281,32 @@ class QMeshViewer(QtWidgets.QFrame):
         #if the light's focal point is following the camera position
         if self.followTarget : self.light.SetFocalPoint(self.pos_Camera)
 
+    def previewShadows(self, new_value):
+        #SHADOWS
+        # self.render_window.SetMultiSamples(0)
+        if new_value :
+            self.renderer.RemoveActor(self.line_actor)
+
+
+            shadows = vtkShadowMapPass()
+            seq = vtkSequencePass()
+            passes = vtkRenderPassCollection()
+            passes.AddItem(shadows.GetShadowMapBakerPass())
+            passes.AddItem(shadows)
+            seq.SetPasses(passes)
+
+            cameraP = vtkCameraPass()
+            cameraP.SetDelegatePass(seq)
+
+            # Tell the renderer to use our render pass pipeline
+            self.renderer.SetPass(cameraP)
+        else :
+            self.renderer.AddActor(self.line_actor)
+            self.renderer.SetPass(None)
+
+        self.render_window.Render()
+
+
 
 ################################################################################
 ################################################################################
@@ -274,7 +318,7 @@ class QMeshViewer(QtWidgets.QFrame):
         z = self.light.GetPosition()[2]
         
         self.light.SetPosition(new_value, y, z)
-        self.sun_ball.SetCenter(new_value, y, z)
+        self.sun_ball.SetCenter(new_value, y, z+_sunOffset)
         
         self.pos_Light = [new_value, y, z]
         self.line.SetPoint1(self.pos_Light)
@@ -288,7 +332,7 @@ class QMeshViewer(QtWidgets.QFrame):
         z = self.light.GetPosition()[2]
         
         self.light.SetPosition(x, new_value, z)
-        self.sun_ball.SetCenter(x, new_value, z)
+        self.sun_ball.SetCenter(x, new_value, z+_sunOffset)
         
         self.pos_Light = [x, new_value, z]
         self.line.SetPoint1(self.pos_Light)
@@ -302,7 +346,7 @@ class QMeshViewer(QtWidgets.QFrame):
         y = self.light.GetPosition()[1]
 
         self.light.SetPosition(x, y, new_value)
-        self.sun_ball.SetCenter(x, y, new_value)
+        self.sun_ball.SetCenter(x, y, new_value+_sunOffset)
 
         self.pos_Light = [x, y, new_value]
         self.line.SetPoint1(self.pos_Light)

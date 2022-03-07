@@ -54,8 +54,8 @@
      <widget class="QRadioButton" name="radioButton">
       <property name="geometry">
        <rect>
-        <x>30</x>
-        <y>690</y>
+        <x>20</x>
+        <y>730</y>
         <width>131</width>
         <height>30</height>
        </rect>
@@ -67,8 +67,8 @@
      <widget class="QComboBox" name="comboBox">
       <property name="geometry">
        <rect>
-        <x>30</x>
-        <y>650</y>
+        <x>20</x>
+        <y>690</y>
         <width>95</width>
         <height>31</height>
        </rect>
@@ -95,7 +95,7 @@
         <x>10</x>
         <y>10</y>
         <width>201</width>
-        <height>441</height>
+        <height>491</height>
        </rect>
       </property>
       <property name="frameShape">
@@ -169,8 +169,11 @@
         <layout class="QVBoxLayout" name="verticalLayout">
          <item>
           <widget class="QSlider" name="lightPos_x">
+           <property name="minimum">
+            <number>-300</number>
+           </property>
            <property name="maximum">
-            <number>999</number>
+            <number>400</number>
            </property>
            <property name="singleStep">
             <number>5</number>
@@ -185,8 +188,11 @@
          </item>
          <item>
           <widget class="QSlider" name="lightPos_y">
+           <property name="minimum">
+            <number>-300</number>
+           </property>
            <property name="maximum">
-            <number>999</number>
+            <number>500</number>
            </property>
            <property name="singleStep">
             <number>5</number>
@@ -205,7 +211,7 @@
             <number>-100</number>
            </property>
            <property name="maximum">
-            <number>999</number>
+            <number>400</number>
            </property>
            <property name="singleStep">
             <number>5</number>
@@ -424,12 +430,64 @@
         <bool>false</bool>
        </property>
       </widget>
+      <widget class="QFrame" name="frame_9">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>430</y>
+         <width>181</width>
+         <height>51</height>
+        </rect>
+       </property>
+       <property name="frameShape">
+        <enum>QFrame::StyledPanel</enum>
+       </property>
+       <property name="frameShadow">
+        <enum>QFrame::Raised</enum>
+       </property>
+       <widget class="QLabel" name="label_8">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>10</y>
+          <width>61</width>
+          <height>16</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>7</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Shadows</string>
+        </property>
+       </widget>
+       <widget class="QRadioButton" name="rb_PreviewShadows">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>20</y>
+          <width>101</width>
+          <height>30</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>8</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Preview</string>
+        </property>
+       </widget>
+      </widget>
      </widget>
      <widget class="QFrame" name="frame_7">
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>460</y>
+        <y>510</y>
         <width>201</width>
         <height>171</height>
        </rect>
@@ -506,10 +564,10 @@
          <item>
           <widget class="QSlider" name="cameraPos_x">
            <property name="minimum">
-            <number>-500</number>
+            <number>-300</number>
            </property>
            <property name="maximum">
-            <number>500</number>
+            <number>400</number>
            </property>
            <property name="singleStep">
             <number>5</number>
@@ -525,7 +583,7 @@
          <item>
           <widget class="QSlider" name="cameraPos_y">
            <property name="minimum">
-            <number>-500</number>
+            <number>-300</number>
            </property>
            <property name="maximum">
             <number>500</number>
@@ -547,7 +605,7 @@
             <number>-100</number>
            </property>
            <property name="maximum">
-            <number>999</number>
+            <number>400</number>
            </property>
            <property name="singleStep">
             <number>5</number>

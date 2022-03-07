@@ -28,9 +28,9 @@ def addLine(renderer, p1, p2, color=[0.0, 0.0, 1.0]):
     actor.SetMapper(mapper)
     actor.GetProperty().SetColor(color)
 
-    #renderer.AddActor(actor)
+    # renderer.AddActor(actor)
     
-    return line
+    return actor, line
 
 def addPoint(renderer, p, radius=5.0, color=[0.0, 0.0, 0.0]):
     point = vtk.vtkSphereSource()
