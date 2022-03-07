@@ -26,7 +26,9 @@ from utils import *
 from vtkmodules.vtkCommonTransforms import vtkTransform
 from vtkmodules.vtkRenderingAnnotation import vtkAxesActor
 from vtkmodules.vtkFiltersModeling import vtkOutlineFilter
+from astropy.coordinates import cartesian_to_spherical, spherical_to_cartesian
 import numpy as np
+import math
 
 model = "models/Nuclear_Power_Plant_v1/10078_Nuclear_Power_Plant_v1_L3.obj"
 # scene = "models/naboo/naboo_complex.obj"
@@ -108,6 +110,7 @@ class QMeshViewer(QtWidgets.QFrame):
         pp_actor = vtkActor()
         pp_actor.SetMapper(pp_mapper)
         pp_actor.GetProperty().SetColor(colors.GetColor3d('AliceBlue'))
+        pp_actor.SetPosition(-100, -150, 0)
 
         self.renderer.AddActor(pp_actor)
         self.powerplant_actor = pp_actor
@@ -251,13 +254,17 @@ class QMeshViewer(QtWidgets.QFrame):
 ################################################################################
 ################################################################################
     def light_pos_x(self, new_value):
+        x = self.light.GetPosition()[0]
         y = self.light.GetPosition()[1]
         z = self.light.GetPosition()[2]
+
+        _, lat, lon = cartesian_to_spherical(x, y, z)
+        x, y, z = spherical_to_cartesian(new_value, lat, lon)
+
+        self.light.SetPosition(x, y, z)
+        self.sun_ball.SetCenter(x, y, z)
         
-        self.light.SetPosition(new_value, y, z)
-        self.sun_ball.SetCenter(new_value, y, z)
-        
-        self.pos_Light = [new_value, y, z]
+        self.pos_Light = [x, y, z]
         self.line.SetPoint1(self.pos_Light)
 
         self.intersect()
@@ -266,12 +273,16 @@ class QMeshViewer(QtWidgets.QFrame):
         
     def light_pos_y(self, new_value):
         x = self.light.GetPosition()[0]
+        y = self.light.GetPosition()[1]
         z = self.light.GetPosition()[2]
+
+        r, _, lon = cartesian_to_spherical(x, y, z)
+        x, y, z = spherical_to_cartesian(r, new_value* math.pi/180, lon)
+
+        self.light.SetPosition(x, y, z)
+        self.sun_ball.SetCenter(x, y, z)
         
-        self.light.SetPosition(x, new_value, z)
-        self.sun_ball.SetCenter(x, new_value, z)
-        
-        self.pos_Light = [x, new_value, z]
+        self.pos_Light = [x, y, z]
         self.line.SetPoint1(self.pos_Light)
 
         self.intersect()
@@ -281,11 +292,15 @@ class QMeshViewer(QtWidgets.QFrame):
     def light_pos_z(self, new_value):
         x = self.light.GetPosition()[0]
         y = self.light.GetPosition()[1]
+        z = self.light.GetPosition()[2]
 
-        self.light.SetPosition(x, y, new_value)
-        self.sun_ball.SetCenter(x, y, new_value)
+        r, lat, _ = cartesian_to_spherical(x, y, z)
+        x, y, z = spherical_to_cartesian(r, lat, (new_value*math.pi/180))
 
-        self.pos_Light = [x, y, new_value]
+        self.light.SetPosition(x, y, z)
+        self.sun_ball.SetCenter(x, y, z)
+        
+        self.pos_Light = [x, y, z]
         self.line.SetPoint1(self.pos_Light)
 
         self.intersect()
