@@ -25,7 +25,7 @@ model = "models/Nuclear_Power_Plant_v1/10078_Nuclear_Power_Plant_v1_L3.obj"
 # scene = "models/naboo/naboo_complex.obj"
 
 
-#TODO : Rename pSource en pLight
+#TODO : Rename pos_Light en pLight
 #TODO : AddPoint en AddSphere
 
 light_x = 0.0
@@ -101,24 +101,24 @@ class QMeshViewer(QtWidgets.QFrame):
         self.powerplant_actor = pp_actor
 
         ## LIGHT
-        self.light1 = vtk.vtkLight()
-        self.light1.SetIntensity(0.5)
-        self.light1.SetPosition(light_x, light_y, light_z)
-        # self.light1.SetLightType(2)
-        self.light1.SetDiffuseColor(1, 1, 1)
-        renderer.AddLight(self.light1)
+        self.light = vtk.vtkLight()
+        self.light.SetIntensity(0.5)
+        self.light.SetPosition(light_x, light_y, light_z)
+        # self.light.SetLightType(2)
+        self.light.SetDiffuseColor(1, 1, 1)
+        renderer.AddLight(self.light)
         
-        ## SUN BALL TO SHOW WHERE IS LIGHT
-        self.pSource = [light_x, light_y, light_z]
-        _, self.sun = addPoint(renderer, self.pSource, color=[1.0, 1.0, 0.0])
+        ## sun_ball BALL TO SHOW WHERE IS LIGHT
+        self.pos_Light = [light_x, light_y, light_z]
+        _, self.sun_ball = addPoint(renderer, self.pos_Light, color=[1.0, 1.0, 0.0])
 
         self.render_window = render_window
         self.interactor = interactor
         self.renderer = renderer
         
-        self.pTarget = [100.0, 10.0, 30.0]
-        _, self.cam = addPoint(renderer, self.pTarget, color=[0.0, 1.0, 0.0])
-        self.line = addLine(renderer, self.pSource, self.pTarget)
+        self.pos_Camera = [100.0, 10.0, 30.0]
+        _, self.cam_ball = addPoint(renderer, self.pos_Camera, color=[0.0, 1.0, 0.0])
+        self.line = addLine(renderer, self.pos_Light, self.pos_Camera)
 
 
         self.obbTree = vtk.vtkOBBTree()
@@ -160,14 +160,14 @@ class QMeshViewer(QtWidgets.QFrame):
         # self.sphere.SetThetaResolution(new_value)
         
         # self.power_plant.SetPosition(new_value, new_value, new_value)
-        # self.light1.SetIntensity(new_value)
+        # self.light.SetIntensity(new_value)
         
         self.render_window.Render()
 
     def intersect(self):
 
         pointsVTKintersection = vtk.vtkPoints()
-        code = self.obbTree.IntersectWithLine(self.pSource, self.pTarget, pointsVTKintersection, None) #None for CellID but we will need this info later
+        code = self.obbTree.IntersectWithLine(self.pos_Light, self.pos_Camera, pointsVTKintersection, None) #None for CellID but we will need this info later
 
         pointsVTKIntersectionData = pointsVTKintersection.GetData()
         noPointsVTKIntersection = pointsVTKIntersectionData.GetNumberOfTuples()
@@ -198,15 +198,15 @@ class QMeshViewer(QtWidgets.QFrame):
 
 
     def light_pos_x(self, new_value):
-        y = self.light1.GetPosition()[1]
-        z = self.light1.GetPosition()[2]
+        y = self.light.GetPosition()[1]
+        z = self.light.GetPosition()[2]
         
-        self.light1.SetPosition(new_value, y, z)
-        self.sun.SetCenter(new_value, y, z)
+        self.light.SetPosition(new_value, y, z)
+        self.sun_ball.SetCenter(new_value, y, z)
         
-        self.pSource = [new_value, y, z]
-        self.line.SetPoint1(self.pSource)
-        # addLine(self.renderer, self.pSource, self.pTarget)
+        self.pos_Light = [new_value, y, z]
+        self.line.SetPoint1(self.pos_Light)
+        # addLine(self.renderer, self.pos_Light, self.pos_Camera)
 
         self.intersect()
 
@@ -214,43 +214,43 @@ class QMeshViewer(QtWidgets.QFrame):
         
         
     def light_pos_y(self, new_value):
-        x = self.light1.GetPosition()[0]
-        z = self.light1.GetPosition()[2]
+        x = self.light.GetPosition()[0]
+        z = self.light.GetPosition()[2]
         
-        self.light1.SetPosition(x, new_value, z)
-        self.sun.SetCenter(x, new_value, z)
+        self.light.SetPosition(x, new_value, z)
+        self.sun_ball.SetCenter(x, new_value, z)
         
-        self.pSource = [x, new_value, z]
-        self.line.SetPoint1(self.pSource)
-        # addLine(self.renderer, self.pSource, self.pTarget)
+        self.pos_Light = [x, new_value, z]
+        self.line.SetPoint1(self.pos_Light)
+        # addLine(self.renderer, self.pos_Light, self.pos_Camera)
 
         self.intersect()
 
         self.render_window.Render()
 
     def light_pos_z(self, new_value):
-        x = self.light1.GetPosition()[0]
-        y = self.light1.GetPosition()[1]
+        x = self.light.GetPosition()[0]
+        y = self.light.GetPosition()[1]
 
-        self.light1.SetPosition(x, y, new_value)
-        self.sun.SetCenter(x, y, new_value)
+        self.light.SetPosition(x, y, new_value)
+        self.sun_ball.SetCenter(x, y, new_value)
 
-        self.pSource = [x, y, new_value]
-        self.line.SetPoint1(self.pSource)
-        # addLine(self.renderer, self.pSource, self.pTarget)
+        self.pos_Light = [x, y, new_value]
+        self.line.SetPoint1(self.pos_Light)
+        # addLine(self.renderer, self.pos_Light, self.pos_Camera)
 
         self.intersect()
 
         self.render_window.Render()
         
     def light_intensity(self, new_value):
-        self.light1.SetIntensity(new_value/100.)
+        self.light.SetIntensity(new_value/100.)
         self.render_window.Render()
 
 
     def save_event(self):
-        print(self.light1.GetFocalPoint())
-        # self.light1.SetFocalPoint((100,100,100))
+        print(self.light.GetFocalPoint())
+        # self.light.SetFocalPoint((100,100,100))
         
         print("Button pressed ! Saving...")
 
