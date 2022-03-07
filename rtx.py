@@ -12,7 +12,7 @@ from vtkmodules.vtkRenderingCore import (
     vtkRenderWindowInteractor,
     vtkSkybox,
     vtkCamera,
-    vtkTexture
+    vtkTexture,
 )
 from vtkmodules.vtkRenderingOpenGL2 import (
     vtkCameraPass,
@@ -26,6 +26,7 @@ from utils import *
 from vtkmodules.vtkCommonTransforms import vtkTransform
 from vtkmodules.vtkRenderingAnnotation import vtkAxesActor
 from vtkmodules.vtkFiltersModeling import vtkOutlineFilter
+import numpy as np
 
 model = "models/Nuclear_Power_Plant_v1/10078_Nuclear_Power_Plant_v1_L3.obj"
 # scene = "models/naboo/naboo_complex.obj"
@@ -130,22 +131,42 @@ class QMeshViewer(QtWidgets.QFrame):
         sun_actor, self.sun_ball = addPoint(self.renderer, self.pos_Light, color=[1.0, 1.0, 0.0])
         self.sun_ball.SetPhiResolution(sun_resolution)
         self.sun_ball.SetThetaResolution(sun_resolution)
-        self.sun_ball.SetStartPhi(90) #to cut half a sphere
+        # self.sun_ball.SetStartPhi(90) #to cut half a sphere
         sun_actor.GetProperty().EdgeVisibilityOn()  # show edges/wireframe
         sun_actor.GetProperty().SetEdgeColor([0.,0.,0.])  
         
+
+        # cellCenterCalcSun = vtk.vtkCellCenters()
+        # # t = np.array([m for m in dir(cellCenterCalcSun) if not m.startswith('__')])
+        # # print(t)
+        # cellCenterCalcSun.SetInputData(self.sun_ball.GetOutput())
+        # cellCenterCalcSun.VertexCellsOn()
+        # cellCenterCalcSun.Update()
+        # # Get the point centers from 'cellCenterCalc'
+        # pointsCellCentersSun = cellCenterCalcSun.GetOutput(0)
+        # print(pointsCellCentersSun.GetNumberOfPoints())
+        # for idx in range(pointsCellCentersSun.GetNumberOfPoints()):
+        #     addPoint(self.renderer, pointsCellCentersSun.GetPoint(idx), [1,1,0])
+
+        
+        
+        #Camera (source) object settings, not the actual vtk camera
         self.pos_Camera = [100.0, 10.0, 30.0]
         _, self.cam_ball = addPoint(self.renderer, self.pos_Camera, color=[0.0, 1.0, 0.0])
         self.line = addLine(self.renderer, self.pos_Light, self.pos_Camera)
 
-
+        #For the intersections
         self.obbTree = vtk.vtkOBBTree()
         self.obbTree.SetDataSet(powerplant_reader.GetOutput())
         self.obbTree.BuildLocator()
 
         self.intersect_list = []
 
-
+################################################################################
+################################################################################
+#                              CLASS METHODS                                   #
+################################################################################
+################################################################################
     def start(self):
         self.interactor.Initialize()
         self.interactor.Start()
@@ -162,13 +183,14 @@ class QMeshViewer(QtWidgets.QFrame):
         reader.SetFileName("skin.jpg")
         texture = vtkTexture()
         texture.SetInputConnection(reader.GetOutputPort())
-        
         # if new_value:
             # texture = vtkTexture()
         # else:
             # texture = vtkTexture()
 
         self.powerplant_actor.SetTexture(texture)
+        self.render_window.Render()
+        
 
     def intersect(self):
         pointsVTKintersection = vtk.vtkPoints()
@@ -328,6 +350,7 @@ class QMeshViewer(QtWidgets.QFrame):
         self.render_window.Render()
 
     #END OF MAIN class QMeshViewer
+    ##############################
 
 ################################################################################
 ################################################################################
