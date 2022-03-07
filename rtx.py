@@ -14,6 +14,12 @@ from vtkmodules.vtkRenderingCore import (
     vtkCamera,
     vtkTexture
 )
+from vtkmodules.vtkRenderingOpenGL2 import (
+    vtkCameraPass,
+    vtkRenderPassCollection,
+    vtkSequencePass,
+    vtkShadowMapPass
+)
 from vtkmodules.vtkInteractionWidgets import vtkOrientationMarkerWidget
 from vtk import vtkPNGReader, vtkJPEGReader, vtkTextureMapToSphere
 from utils import *
@@ -66,22 +72,22 @@ class QMeshViewer(QtWidgets.QFrame):
     def __init__(self, parent):
         super(QMeshViewer, self).__init__(parent)
         
-        interactor = QVTKRenderWindowInteractor(self)
+        self.interactor = QVTKRenderWindowInteractor(self)
         self.layout = QtWidgets.QHBoxLayout()
-        self.layout.addWidget(interactor)
+        self.layout.addWidget(self.interactor)
         self.layout.setContentsMargins(0,0,0,0)
         self.setLayout(self.layout)
         
         colors = vtk.vtkNamedColors()
 
-        renderer = vtk.vtkRenderer()
-        render_window = interactor.GetRenderWindow()
-        render_window.AddRenderer(renderer)
-        interactor.SetInteractorStyle(vtk.vtkInteractorStyleTrackballCamera())
-        render_window.SetInteractor(interactor)
+        self.renderer = vtk.vtkRenderer()
+        self.render_window = self.interactor.GetRenderWindow()
+        self.render_window.AddRenderer(self.renderer)
+        self.interactor.SetInteractorStyle(vtk.vtkInteractorStyleTrackballCamera())
+        self.render_window.SetInteractor(self.interactor)
         # render_window.SetSize(512, 512)
-        interactor.SetRenderWindow(render_window)
-        renderer.SetBackground(colors.GetColor3d("DarkGreen"))
+        self.interactor.SetRenderWindow(self.render_window)
+        self.renderer.SetBackground(colors.GetColor3d("DarkGreen"))
         # renderer.SetBackground(colors.GetColor3d("AliceBlue"))
 
 
@@ -97,7 +103,7 @@ class QMeshViewer(QtWidgets.QFrame):
         pp_actor.SetMapper(pp_mapper)
         pp_actor.GetProperty().SetColor(colors.GetColor3d('AliceBlue'))
 
-        renderer.AddActor(pp_actor)
+        self.renderer.AddActor(pp_actor)
         self.powerplant_actor = pp_actor
 
         ## LIGHT
@@ -106,29 +112,56 @@ class QMeshViewer(QtWidgets.QFrame):
         self.light.SetPosition(light_x, light_y, light_z)
         # self.light.SetLightType(2)
         self.light.SetDiffuseColor(1, 1, 1)
-        renderer.AddLight(self.light)
+        self.renderer.AddLight(self.light)
         
         ## sun_ball BALL TO SHOW WHERE IS LIGHT
         self.pos_Light = [light_x, light_y, light_z]
-        _, self.sun_ball = addPoint(renderer, self.pos_Light, color=[1.0, 1.0, 0.0])
+        _, self.sun_ball = addPoint(self.renderer, self.pos_Light, color=[1.0, 1.0, 0.0])
 
-        self.render_window = render_window
-        self.interactor = interactor
-        self.renderer = renderer
         
         self.pos_Camera = [100.0, 10.0, 30.0]
-        _, self.cam_ball = addPoint(renderer, self.pos_Camera, color=[0.0, 1.0, 0.0])
-        self.line = addLine(renderer, self.pos_Light, self.pos_Camera)
+        _, self.cam_ball = addPoint(self.renderer, self.pos_Camera, color=[0.0, 1.0, 0.0])
+        self.line = addLine(self.renderer, self.pos_Light, self.pos_Camera)
 
 
         self.obbTree = vtk.vtkOBBTree()
         self.obbTree.SetDataSet(powerplant_reader.GetOutput())
         self.obbTree.BuildLocator()
-        
-        
+
+
+        # Shadows
+        """
+        self.render_window.SetMultiSamples(0)
+
+        shadows = vtkShadowMapPass()
+
+        seq = vtkSequencePass()
+
+        passes = vtkRenderPassCollection()
+        passes.AddItem(shadows.GetShadowMapBakerPass())
+        passes.AddItem(shadows)
+        seq.SetPasses(passes)
+
+        cameraP = vtkCameraPass()
+        cameraP.SetDelegatePass(seq)
+
+        # Tell the renderer to use our render pass pipeline
+        glrenderer = self.renderer
+        glrenderer.SetPass(cameraP)
+
+        self.renderer.GetActiveCamera().SetPosition(-0.2, 0.2, 1)
+        self.renderer.GetActiveCamera().SetFocalPoint(0, 0, 0)
+        self.renderer.GetActiveCamera().SetViewUp(0, 1, 0)
+        self.renderer.ResetCamera()
+        self.renderer.GetActiveCamera().Dolly(2.25)
+        self.renderer.ResetCameraClippingRange()
+        self.render_window.SetWindowName('Shadows')
+        self.render_window.Render()
+        self.render_window.SetWindowName('Shadows')
+        """
+
         self.intersect_list = []
 
-        self.renderer = renderer
 
     def start(self):
         self.interactor.Initialize()
