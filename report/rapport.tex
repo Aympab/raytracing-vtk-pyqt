@@ -47,7 +47,11 @@
 This documents contains the presentation of our work on implementing a
 RayTracing algorithm using the VTK library and Python's bindings.
 
-First, we are going to do a brief sate of the art.
+First, we are going to do a brief sate of the art on raytracing, then we will
+explain our implementation logic and technical choices. To conclude, we will
+show some images rendered by our application.
+
+Difficultés rencontrées :
 
 Learning VTK's logic and syntax was a difficulty
 
@@ -57,162 +61,85 @@ Learning VTK's logic and syntax was a difficulty
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% RECUPERER LE CODE
 \section{Running the code}
-The source code is available on my GitHub branch, under the "Project" folder.
-Only the python files are the ones with the final code, not the jupyter notebook
-files.
+The source code is available on
+\href{https://git.sophia.mines-paristech.fr/aymeric.millan/visu-raytracing}{Mines' GitLab server}.
+You can use the \code{environment.yml} file to setup your Python environment
+with conda.
 
-In order to run the code, you will need to have an Hadoop environment correctly
-set with the right python modules installed. Also, you might need to change the
-path of the data folder in order to run the ML codes.
+To run the app, just launch the \code{main.py} file and let the UI guide you !
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% SPARK
+%% STATE OF ART
+\section{State of the art}
+
+    Raytracing il ya ca ca ca
+
+
+    % \begin{figure}[H]
+    %       \centering
+    %       \caption{Dask output interface}
+    %     \includegraphics[width=0.45\textwidth]{fig/dask_interface.png}
+    % \end{figure}
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%TITLE
+    \subsection{1er truc}
+
+Le 1er truc qu'on a trouvé sur l'algo
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% IMPLEMENTATION LOGIC
 \section{Implementation logic}
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %%%%%IRIS
-    \subsection{Spark ML : Iris Classification}
+    %%%%%QT
+    \subsection{Python's VTK bindings}
 
-    In this part, we want to use the abstraction of Spark to compute machine
-learning algorithms on distributed files without having to manage the
-parallelism. I used three different calssifiers : 
-\href{https://spark.apache.org/docs/latest/ml-classification-regression.html#multilayer-perceptron-classifier}{Multilayer Perceptron},
-\href{https://spark.apache.org/docs/latest/ml-classification-regression.html#random-forest-classifier}{Random Forest}
-and \href{https://spark.apache.org/docs/latest/ml-classification-regression.html#decision-tree-classifier}{Decision Trees}.
-The image following is the number of prediction for each model, and their
-scores.
-
-\begin{figure}[H]
-    \centering
-    \caption{Models' scores and predictions}
-    \includegraphics[width=0.45\textwidth]{fig/scores_models_spark.png}
-\end{figure}
-
-As we can see, the Random Forest Classifier seems to have the best score with
-this dataset. But it is probably due to overfitting since the dataset is quite
-small (150 samples).
+Blabla why we used python, Blabla.
+Finir sur une phrase qui dit qu'on a utilisé les bindings avec qt..
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %%%%%PARALLELISATION
-    \subsection{Spark : parallelisation of the image processing algorithm
-    "MedianFilter"}
+    %%%%%QT
+    \subsection{User Interface : Qt Designer}
 
-    For this part, the main challenge was to truncate the image buffer in order
-to compute local median filter algorithms. To not reinvent the wheel, and to use
-more librairies to this project, I used the 
-\href{https://docs.scipy.org/doc/scipy/reference/generated/scipy.ndimage.median_filter.html}
-{median\_filter} function from scipy's "ndimage" module. The true challenge of
-this part was to correctly slice and concatenate the image buffer. Moreover, I
-had to dive into the documentations of numpy, scipy and pyspark to know the
-methods I needed. It was a lot of internet search, but I finally made it in a
-easy and quickly understandable way.
+    We decided to use Qt (with either PySide or PyQt as a wrapper) for the User
+interface, this way, we don't have to make complex documentation about what
+keyboard shortcut to use to interact with ou VTK panel. 
 
-\begin{figure}[H]
-      \centering
-      \caption{Lena before and after MedianFilter}
-    \includegraphics[width=0.45\textwidth]{fig/lena_before_after.png}
-\end{figure}
+PICTURE OF SLIDERS
+% \begin{figure}[H]
+%     \centering
+%     \caption{Models' scores and predictions}
+%     \includegraphics[width=0.45\textwidth]{fig/scores_models_spark.png}
+% \end{figure}
 
-The algorithm splits the image in a certain number of blocks. Each process
-computes locally a median filter, and we concatenate the arrays we got from each
-process to rebuild the picture.
+To build the UI we used \href{https://doc.qt.io/qt-5/qtdesigner-manual.html}{Qt Designer},
+which generated a \code{.ui} file. This file is compiled at the start of our
+program into a \code{.py} file which is the corresponding Qt Windows, with all
+sizes and objects' labels automatically set. We do not have to touch this file
+once it is generated.This method allowed us to make a more complex UI to give
+the user more interaction with our VTK environment.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% DASK
-\section{Dask}
+In the code, we had to make a binding between the objects' methods (e.g.,
+\code{ValueChanged} for a Slider) and Python functions taht interacts directly with
+our VTK actors and/or sources.
 
-    We are now going to do similar works that we have done with Spark, but using
-the \textbf{Dask} framework. This framework is younger than Spark. Which means,
-it is less mature, so we won't have as much as functionnalities and robustness,
-but it is much more dynamic and user-friendly. For example, this is the output
-when reading an image with dask.
-
-    \begin{figure}[H]
-          \centering
-          \caption{Dask output interface}
-        \includegraphics[width=0.45\textwidth]{fig/dask_interface.png}
-    \end{figure}
-
-The framework gives us, in a pretty way, the dimension of our array, the size of
-it, its type, and other informations. To achieve this same thing in Spark, it
-takes more than a single line of code. Here we can see that our image is
-$128\times 128$, with a 3rd dimension that corresponds to the RGB values since
-we are working in colors.
-
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %%%%%FLOWERS
-    \subsection{Dask ML : flower classification}
-
-    In this sections, we used Dask's framework to predict the class of flowers,
-just as we did with Spark in the previous part. Dask was really easier to
-approach, since doing machine learning with Dask is just doing the ML you know
-(sklearn, xgboost, etc..) and plugging it to the dask cluster. The syntax stays
-the same. For this part, all three models have the same predict score at the end
-(93 \%), this is probably because of the size of the dataset, which is too small
-to be able to see difference. The code is available in the python file.
-
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %%%%%PARALLELISATION
-    \subsection{Dask : parallelisation of the image processing algorithm 
-    "MedianFilter"}
-    
-    In order to compute the parallelized median filter, we first have to
-truncate ou picture in the number of partition that we want. Dask doesn't work
-exactly like Spark. How I did is I first splited the Lena picture in the number
-of partition.
-
-    \begin{figure}[H]
-          \centering
-          \caption{Tiled Lena}
-        \includegraphics[width=0.3\textwidth]{fig/lena_distributed.png}
-    \end{figure}
-
-Then, I distributed the calculus between all these separated images, wich are
-all in different files. Here we have 8 partitions and our image is $128\times
-128$, so each partition will be of size $128\times 16$, times 3 for the 3 RGB
-canals. This means that we won't have to compute the local buffer
-\textbf{inside} the function, as we did with Spark.
-
-    \begin{figure}[H]
-        \centering
-        \caption{DAG}
-    \includegraphics[width=0.5\textwidth]{fig/dask_graph_filter.png}
-    \end{figure}
-
-    The figure above shows part of the task graph that Dask has generated. Once
-again, there was an
-\href{}{implementation of the median filter}
-function in the framework. The really difficult part here was to embrace the
-framework and get use to Dasks DataFrames and parallelisation methods. But once
-I understood the concepts, I found the framework much more intuitive and
-user-friendly than Spark. In just a few lines of code, we could achieve the same
-results as Spark.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% CONCLUSION
 \section*{Conclusions}
 
-In this project, I tried to minimize \textbf{my} code. By this, I mean that
-when I could find a useful function that does what I need (e.g. the median
-filter), I decided to spend more time on reading the documentation and
-integrating a new framework to my code, rather than trying to reinvent the wheel
-by myself. This was intended, to focus more on learning how to learn new
-framrworks than learning a particular one. Hadoop, Spark, and Dask give a level
-of abstraction that makes one more productive while working on large data sets.
-We do not have to manage the distribution of the files between the nodes, nor
-the distribution of the calculus between the CPUs. But these tools still let us
-adapt as much as we want our system to be working on one special environment. 
+VTK c'est une usine à gaz. C'est fort quand meme on peut render nimporte ou avec
+nimporte quel DIrectX, OpenGL, etc... Mais la portabilité a un cout : la complexité
 
-Doing the work of setting up the environment, installing the right modules or
-setting the right system variables made me realize how much every technologies
-are connected together, like Java, Python and C/C++ for this project. But it
-also made me realize the hard work of developpers who make a high abstraction
-level so people can work without having to think of hardware details as we have
-to do when working in a C/C++ environment. Of course, even when using such
-frameworks and high-level implementation, one must be aware of what happends
-inside the blackbox, to better use it.
+Les bindings python sont efficaces
+
+Peut être faire en C++ si cetait a refaire
+
+Toujours plus d'améliorations possible, surtout au niveau e l'interface
+(bouger les objets avec la souris, image de prérendu avant de save un png, etc...)
 
 \bibliography{bibliography}
 \end{document}

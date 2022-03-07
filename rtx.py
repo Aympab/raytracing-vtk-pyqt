@@ -130,8 +130,8 @@ class QMeshViewer(QtWidgets.QFrame):
 
 
         # Shadows
-        """
-        self.render_window.SetMultiSamples(0)
+        # """
+        # self.render_window.SetMultiSamples(0)
 
         shadows = vtkShadowMapPass()
 
@@ -146,19 +146,19 @@ class QMeshViewer(QtWidgets.QFrame):
         cameraP.SetDelegatePass(seq)
 
         # Tell the renderer to use our render pass pipeline
-        glrenderer = self.renderer
-        glrenderer.SetPass(cameraP)
+        # glrenderer = self.renderer
+        self.renderer.SetPass(cameraP)
 
-        self.renderer.GetActiveCamera().SetPosition(-0.2, 0.2, 1)
-        self.renderer.GetActiveCamera().SetFocalPoint(0, 0, 0)
-        self.renderer.GetActiveCamera().SetViewUp(0, 1, 0)
-        self.renderer.ResetCamera()
-        self.renderer.GetActiveCamera().Dolly(2.25)
-        self.renderer.ResetCameraClippingRange()
-        self.render_window.SetWindowName('Shadows')
-        self.render_window.Render()
-        self.render_window.SetWindowName('Shadows')
-        """
+        # self.renderer.GetActiveCamera().SetPosition(-0.2, 0.2, 1)
+        # self.renderer.GetActiveCamera().SetFocalPoint(0, 0, 0)
+        # self.renderer.GetActiveCamera().SetViewUp(0, 1, 0)
+        # self.renderer.ResetCamera()
+        # self.renderer.GetActiveCamera().Dolly(2.25)
+        # self.renderer.ResetCameraClippingRange()
+        # self.render_window.SetWindowName('Shadows')
+        # self.render_window.Render()
+        # self.render_window.SetWindowName('Shadows')
+        # """
 
         self.intersect_list = []
 
