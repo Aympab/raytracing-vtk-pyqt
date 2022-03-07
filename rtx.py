@@ -126,14 +126,15 @@ class QMeshViewer(QtWidgets.QFrame):
         self.followTarget = False #if the camera focal point is on 0,0,0 or on the target
 
 
-        # ## sun_ball BALL TO SHOW WHERE IS LIGHT
-        # self.pos_Light = [light_x, light_y, light_z]
-        # sun_actor, self.sun_ball = addPoint(self.renderer, self.pos_Light, color=[1.0, 1.0, 0.0])
-        # self.sun_ball.SetPhiResolution(sun_resolution)
-        # self.sun_ball.SetThetaResolution(sun_resolution)
-        # # self.sun_ball.SetStartPhi(90) #to cut half a sphere
-        # sun_actor.GetProperty().EdgeVisibilityOn()  # show edges/wireframe
-        # sun_actor.GetProperty().SetEdgeColor([0.,0.,0.])  
+        ## sun_ball BALL TO SHOW WHERE IS LIGHT
+        self.pos_Light = [light_x, light_y, light_z]
+        sun_actor, self.sun_ball = addPoint(self.renderer, self.pos_Light, color=[1.0, 1.0, 0.0])
+        self.sun_ball.SetPhiResolution(sun_resolution)
+        self.sun_ball.SetThetaResolution(sun_resolution)
+        # self.sun_ball.SetStartPhi(90) #to cut half a sphere
+        sun_actor.GetProperty().EdgeVisibilityOn()  # show edges/wireframe
+        sun_actor.GetProperty().SetEdgeColor([0.,0.,0.])  
+        
         
         # _, test = addPoint(self.renderer, self.pos_Light, color=[1.0, 1.0, 0.0])
         # test.SetPhiResolution(sun_resolution)
@@ -181,12 +182,10 @@ class QMeshViewer(QtWidgets.QFrame):
         self.obbTree.BuildLocator()
 
 
+        #SHADOWS
         self.render_window.SetMultiSamples(0)
-
         shadows = vtkShadowMapPass()
-
         seq = vtkSequencePass()
-
         passes = vtkRenderPassCollection()
         passes.AddItem(shadows.GetShadowMapBakerPass())
         passes.AddItem(shadows)
