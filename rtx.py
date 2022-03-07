@@ -138,19 +138,40 @@ class QMeshViewer(QtWidgets.QFrame):
         sun_actor.GetProperty().EdgeVisibilityOn()  # show edges/wireframe
         sun_actor.GetProperty().SetEdgeColor([0.,0.,0.])  
         
-
+        
+        # _, test = addPoint(self.renderer, self.pos_Light, color=[1.0, 1.0, 0.0])
+        # test.SetPhiResolution(sun_resolution)
+        # test.SetThetaResolution(sun_resolution)
         # cellCenterCalcSun = vtk.vtkCellCenters()
         # # t = np.array([m for m in dir(cellCenterCalcSun) if not m.startswith('__')])
         # # print(t)
-        # cellCenterCalcSun.SetInputData(self.sun_ball.GetOutput())
-        # cellCenterCalcSun.VertexCellsOn()
+        # cellCenterCalcSun.SetInputConnection(test.GetOutputPort())
+        # # cellCenterCalcSun.VertexCellsOn()
         # cellCenterCalcSun.Update()
         # # Get the point centers from 'cellCenterCalc'
         # pointsCellCentersSun = cellCenterCalcSun.GetOutput(0)
         # print(pointsCellCentersSun.GetNumberOfPoints())
-        # for idx in range(pointsCellCentersSun.GetNumberOfPoints()):
-        #     addPoint(self.renderer, pointsCellCentersSun.GetPoint(idx), [1,1,0])
+        # # for idx in range(pointsCellCentersSun.GetNumberOfPoints()):
+        # #     addPoint(self.renderer, pointsCellCentersSun.GetPoint(idx), [1,1,0])
 
+
+
+        # # Create a new 'vtkPolyDataNormals' and connect to the 'sun' half-sphere
+        # normalsCalcSun = vtk.vtkPolyDataNormals()
+        # normalsCalcSun.SetInputConnection(self.sun_ball.GetOutputPort())
+
+        # # Disable normal calculation at cell vertices
+        # normalsCalcSun.ComputePointNormalsOff()
+        # # Enable normal calculation at cell centers
+        # normalsCalcSun.ComputeCellNormalsOn()
+        # # Disable splitting of sharp edges
+        # normalsCalcSun.SplittingOff()
+        # # Disable global flipping of normal orientation
+        # normalsCalcSun.FlipNormalsOff()
+        # # Enable automatic determination of correct normal orientation
+        # normalsCalcSun.AutoOrientNormalsOn()
+        # # Perform calculation
+        # normalsCalcSun.Update()
         
         
         #Camera (source) object settings, not the actual vtk camera
@@ -164,12 +185,10 @@ class QMeshViewer(QtWidgets.QFrame):
         self.obbTree.BuildLocator()
 
 
+        #SHADOWS
         self.render_window.SetMultiSamples(0)
-
         shadows = vtkShadowMapPass()
-
         seq = vtkSequencePass()
-
         passes = vtkRenderPassCollection()
         passes.AddItem(shadows.GetShadowMapBakerPass())
         passes.AddItem(shadows)
