@@ -118,10 +118,10 @@
      <widget class="QFrame" name="frame_2">
       <property name="geometry">
        <rect>
-        <x>10</x>
+        <x>20</x>
         <y>200</y>
         <width>201</width>
-        <height>231</height>
+        <height>451</height>
        </rect>
       </property>
       <property name="frameShape">
@@ -154,7 +154,7 @@
          <x>10</x>
          <y>40</y>
          <width>181</width>
-         <height>111</height>
+         <height>121</height>
         </rect>
        </property>
        <property name="frameShape">
@@ -181,13 +181,13 @@
          <string>Position (x, y, z)</string>
         </property>
        </widget>
-       <widget class="QWidget" name="">
+       <widget class="QWidget" name="layoutWidget">
         <property name="geometry">
          <rect>
           <x>10</x>
           <y>40</y>
           <width>161</width>
-          <height>61</height>
+          <height>81</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout">
@@ -225,6 +225,9 @@
          </item>
          <item>
           <widget class="QSlider" name="lightPos_z">
+           <property name="minimum">
+            <number>-100</number>
+           </property>
            <property name="maximum">
             <number>999</number>
            </property>
@@ -246,7 +249,7 @@
        <property name="geometry">
         <rect>
          <x>10</x>
-         <y>160</y>
+         <y>180</y>
          <width>181</width>
          <height>51</height>
         </rect>
@@ -292,6 +295,132 @@
         </property>
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </widget>
+      <widget class="QFrame" name="frame_5">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>250</y>
+         <width>181</width>
+         <height>51</height>
+        </rect>
+       </property>
+       <property name="frameShape">
+        <enum>QFrame::StyledPanel</enum>
+       </property>
+       <property name="frameShadow">
+        <enum>QFrame::Raised</enum>
+       </property>
+       <widget class="QLabel" name="label_4">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>10</y>
+          <width>61</width>
+          <height>16</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>7</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Cone Angle</string>
+        </property>
+       </widget>
+       <widget class="QSlider" name="light_coneAngle">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>30</y>
+          <width>160</width>
+          <height>16</height>
+         </rect>
+        </property>
+        <property name="maximum">
+         <number>180</number>
+        </property>
+        <property name="singleStep">
+         <number>1</number>
+        </property>
+        <property name="value">
+         <number>40</number>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </widget>
+      <widget class="QFrame" name="frame_6">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>310</y>
+         <width>181</width>
+         <height>101</height>
+        </rect>
+       </property>
+       <property name="frameShape">
+        <enum>QFrame::StyledPanel</enum>
+       </property>
+       <property name="frameShadow">
+        <enum>QFrame::Raised</enum>
+       </property>
+       <widget class="QLabel" name="label_5">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>10</y>
+          <width>121</width>
+          <height>16</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>7</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Focal point (Default : 0,0,0)</string>
+        </property>
+       </widget>
+       <widget class="QRadioButton" name="light_focalPoint">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>60</y>
+          <width>101</width>
+          <height>30</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>8</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Follow target</string>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="light_focalPoint_button">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>30</y>
+          <width>81</width>
+          <height>31</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Set on target</string>
         </property>
        </widget>
       </widget>

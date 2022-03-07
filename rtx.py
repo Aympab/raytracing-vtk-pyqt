@@ -30,13 +30,11 @@ from vtkmodules.vtkFiltersModeling import vtkOutlineFilter
 model = "models/Nuclear_Power_Plant_v1/10078_Nuclear_Power_Plant_v1_L3.obj"
 # scene = "models/naboo/naboo_complex.obj"
 
-
-#TODO : Rename pos_Light en pLight
-#TODO : AddPoint en AddSphere
-
 light_x = 0.0
 light_y = 50.0
 light_z = 50.0
+sun_resolution = 6
+followTarget = False #if the camera focal point is on 0,0,0 or on the target
 
 class ViewersApp(QtWidgets.QMainWindow):
     def __init__(self):
@@ -64,6 +62,9 @@ class ViewersApp(QtWidgets.QMainWindow):
         self.ui.lightPos_x.valueChanged.connect(self.vtk_widget.light_pos_x)
         self.ui.lightPos_y.valueChanged.connect(self.vtk_widget.light_pos_y)
         self.ui.lightPos_z.valueChanged.connect(self.vtk_widget.light_pos_z)
+        self.ui.light_coneAngle.valueChanged.connect(self.vtk_widget.light_coneAngle)
+        self.ui.light_focalPoint.clicked.connect(self.vtk_widget.light_focalPointFollow)
+        self.ui.light_focalPoint_button.clicked.connect(self.vtk_widget.light_focalPoint)
         
     def initialize(self):
         self.vtk_widget.start()
@@ -112,12 +113,20 @@ class QMeshViewer(QtWidgets.QFrame):
         self.light.SetPosition(light_x, light_y, light_z)
         # self.light.SetLightType(2)
         self.light.SetDiffuseColor(1, 1, 1)
+        self.light.SetFocalPoint(0.,0.,0.)
+        # self.light.SetConeAngle(90)
+        # print(self.light.GetConeAngle())
+        self.light.SetPositional(True)
         self.renderer.AddLight(self.light)
         
         ## sun_ball BALL TO SHOW WHERE IS LIGHT
         self.pos_Light = [light_x, light_y, light_z]
-        _, self.sun_ball = addPoint(self.renderer, self.pos_Light, color=[1.0, 1.0, 0.0])
-
+        sun_actor, self.sun_ball = addPoint(self.renderer, self.pos_Light, color=[1.0, 1.0, 0.0])
+        self.sun_ball.SetPhiResolution(sun_resolution)
+        self.sun_ball.SetThetaResolution(sun_resolution)
+        self.sun_ball.SetStartPhi(90) #to cut half a sphere
+        sun_actor.GetProperty().EdgeVisibilityOn()  # show edges/wireframe
+        sun_actor.GetProperty().SetEdgeColor([0.,0.,0.])  
         
         self.pos_Camera = [100.0, 10.0, 30.0]
         _, self.cam_ball = addPoint(self.renderer, self.pos_Camera, color=[0.0, 1.0, 0.0])
@@ -130,8 +139,8 @@ class QMeshViewer(QtWidgets.QFrame):
 
 
         # Shadows
-        # """
-        # self.render_window.SetMultiSamples(0)
+        """
+        self.render_window.SetMultiSamples(0)
 
         shadows = vtkShadowMapPass()
 
@@ -149,16 +158,16 @@ class QMeshViewer(QtWidgets.QFrame):
         # glrenderer = self.renderer
         self.renderer.SetPass(cameraP)
 
-        # self.renderer.GetActiveCamera().SetPosition(-0.2, 0.2, 1)
-        # self.renderer.GetActiveCamera().SetFocalPoint(0, 0, 0)
-        # self.renderer.GetActiveCamera().SetViewUp(0, 1, 0)
-        # self.renderer.ResetCamera()
-        # self.renderer.GetActiveCamera().Dolly(2.25)
-        # self.renderer.ResetCameraClippingRange()
-        # self.render_window.SetWindowName('Shadows')
-        # self.render_window.Render()
-        # self.render_window.SetWindowName('Shadows')
-        # """
+        self.renderer.GetActiveCamera().SetPosition(-0.2, 0.2, 1)
+        self.renderer.GetActiveCamera().SetFocalPoint(0, 0, 0)
+        self.renderer.GetActiveCamera().SetViewUp(0, 1, 0)
+        self.renderer.ResetCamera()
+        self.renderer.GetActiveCamera().Dolly(2.25)
+        self.renderer.ResetCameraClippingRange()
+        self.render_window.SetWindowName('Shadows')
+        self.render_window.Render()
+        self.render_window.SetWindowName('Shadows')
+        """
 
         self.intersect_list = []
 
@@ -225,9 +234,6 @@ class QMeshViewer(QtWidgets.QFrame):
             # print("Same number of points")
             for (_, point), pos in zip(self.intersect_list, current_position_list) :
                 point.SetCenter(pos)
-        
-
-
 
 
     def light_pos_x(self, new_value):
@@ -242,6 +248,7 @@ class QMeshViewer(QtWidgets.QFrame):
         # addLine(self.renderer, self.pos_Light, self.pos_Camera)
 
         self.intersect()
+        if followTarget : self.light.SetFocalPoint(self.pos_Camera)
 
         self.render_window.Render()
         
@@ -258,6 +265,7 @@ class QMeshViewer(QtWidgets.QFrame):
         # addLine(self.renderer, self.pos_Light, self.pos_Camera)
 
         self.intersect()
+        if followTarget : self.light.SetFocalPoint(self.pos_Camera)
 
         self.render_window.Render()
 
@@ -274,18 +282,48 @@ class QMeshViewer(QtWidgets.QFrame):
 
         self.intersect()
 
+        if followTarget : self.light.SetFocalPoint(self.pos_Camera)
+
         self.render_window.Render()
         
     def light_intensity(self, new_value):
         self.light.SetIntensity(new_value/100.)
         self.render_window.Render()
 
+    def light_coneAngle(self, new_value):
+        self.light.SetConeAngle(new_value)
+        self.render_window.Render()
+
+    def light_focalPoint(self, new_value):
+        self.light.SetFocalPoint(self.pos_Camera)
+        self.render_window.Render()
+
+    def light_focalPointFollow(self, new_value):
+        if new_value:
+            followTarget = False
+            self.light.SetFocalPoint(self.pos_Camera)
+        else:
+            followTarget = True
+            self.light.SetFocalPoint(0.,0.,0.)
+            
+        self.render_window.Render()
+
+
 
     def save_event(self):
-        print(self.light.GetFocalPoint())
+        # print(self.light.GetFocalPoint())
         # self.light.SetFocalPoint((100,100,100))
         
-        print("Button pressed ! Saving...")
+        print("Changing Light type (NOT FUNCTIONNAL). Type before change is ",
+              self.light.GetLightType() )
+
+        if(self.light.GetLightType() == 3):
+            self.light.SetLightType(2)
+        else:
+            self.light.SetLightType(3)
+        # print("Button pressed ! Saving...")
+        self.render_window.Render()
+
 
 if __name__ == "__main__":
     with open("Mini_app_Qt_VTK.ui") as ui_file:
