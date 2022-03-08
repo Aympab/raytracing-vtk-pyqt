@@ -429,6 +429,9 @@
               <property name="text">
                <string>Preview Shadows</string>
               </property>
+              <property name="autoExclusive">
+               <bool>false</bool>
+              </property>
              </widget>
             </item>
            </layout>

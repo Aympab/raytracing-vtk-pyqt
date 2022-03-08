@@ -209,6 +209,7 @@ class Ui_MainWindow(object):
         font = QtGui.QFont()
         font.setPointSize(8)
         self.rb_PreviewShadows.setFont(font)
+        self.rb_PreviewShadows.setAutoExclusive(False)
         self.rb_PreviewShadows.setObjectName("rb_PreviewShadows")
         self.verticalLayout_4.addWidget(self.rb_PreviewShadows)
         self.tabWidget.addTab(self.tab_3, "")

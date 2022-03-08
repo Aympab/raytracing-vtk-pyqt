@@ -314,7 +314,6 @@ class QMeshViewer(QtWidgets.QFrame):
 
                 # Get the normal vector at the earth cell that intersected with the ray
                 normalModel =  self.normalsModel.GetTuple(cellIdsInter[0])
-                print(normalModel)
                 # Insert the coordinates of the intersection point in the dummy container
                 self.dummy_points.InsertNextPoint(pointsInter[0])
                 # Insert the normal vector of the intersection cell in the dummy container
@@ -496,10 +495,10 @@ class QMeshViewer(QtWidgets.QFrame):
             line.SetPoint1(pos)
 
             pointRayTarget = n2l(l2n(pointSun) + RayCastLength*l2n(normalSun))
-            line.SetPoint2(pointRayTarget)
 
             
             if isHit(self.obbTree, line.GetPoint1(), line.GetPoint2()):
+                
                 #Change color
                 ac.GetProperty().SetOpacity(1)
                 
@@ -512,7 +511,11 @@ class QMeshViewer(QtWidgets.QFrame):
                 self.dummy_points.InsertNextPoint(pointsInter[0])
                 self.dummy_vectors.InsertNextTuple(n2l(l2n(self.pos_Camera)-l2n(pos)))
                 
+                line.SetPoint2(pointsInter[0])
+                
             else:
+                line.SetPoint2(pointRayTarget)
+                
                 ac.GetProperty().SetOpacity(0.25)
                 
                 pointHit.SetCenter(pointRayTarget)
@@ -805,18 +808,7 @@ class QMeshViewer(QtWidgets.QFrame):
 
                     # if isHit(self.obbTree, pointRayTarget, pointRayReflectedTarget):
                         
-
-                else:
-                    pixelColor = self.renderer.GetBackground()
-
-                # for k in range(max_depth):
-                image[i, j] = pixelColor
-                    
-
-                #si 0 points d'intersections :
-                    # Couleur ce pixel avec la couleur d'arrière-plan
-
-                #sinon 
+                #si point d'intersection
                 
                     # Envoyer un rayon au niveau de chaque source de lumière pour tester si elle est à l'ombre
                     # Si la surface est réfléchissante, le faisceau réfléchi génère: (récursion)
@@ -827,6 +819,18 @@ class QMeshViewer(QtWidgets.QFrame):
                     # Couleur ce pixel avec la couleur résultant
                     # }
                     # }
+                else:
+
+                #si 0 points d'intersections :
+                    # Couleur ce pixel avec la couleur d'arrière-plan
+                    pixelColor = self.renderer.GetBackground()
+
+                # for k in range(max_depth):
+                image[i, j] = pixelColor
+                    
+
+
+
 
         print("Generating picture...")
         for i in tqdm(range(1000000)):
@@ -839,13 +843,7 @@ class QMeshViewer(QtWidgets.QFrame):
         self.render_window.Render()
 
         print("Done !")
-        # print("pos:", position)
-        # print("focal:", focal)
-        # print("clipping:", clipping)
-        # print("viewup:", viewup)
-        # print("distance:", distance)
-        # print("#############")
-        
+
 #endregion
 
     #END OF MAIN class QMeshViewer
