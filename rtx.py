@@ -42,6 +42,10 @@ sun_color = [1.0, 0.986, 0.24]
 sun_ray_color = [1.0, 1.0, 0.24]
 RayCastLength = 500.0
 
+point_resolution = 5
+intersect_color = [0.0, 0.0, 1.0] #blue
+intersect_radius = 2.5
+
 l2n = lambda l: np.array(l)
 n2l = lambda n: list(n)
 
@@ -222,9 +226,9 @@ class QMeshViewer(QtWidgets.QFrame):
         pointsCellCentersSun = self.cellCenterCalcSun.GetOutput(0)
         for idx in range(pointsCellCentersSun.GetNumberOfPoints()):
             pos = pointsCellCentersSun.GetPoint(idx)
-            _, point = addPoint(self.renderer, pos, radius=0.5, color=sun_color)
-            point.SetPhiResolution(1)
-            point.SetThetaResolution(1)
+            _, point = addPoint(self.renderer, pos, radius=0.5, color=sun_color, resolution=10)
+            # point.SetPhiResolution(1)
+            # point.SetThetaResolution(1)
             self.cellCenterSun.append(point)
 
 
@@ -265,6 +269,7 @@ class QMeshViewer(QtWidgets.QFrame):
 
 
         self.lines_hit = []
+        self.points_hit = []
 
         # Extract the normal-vector data at the sun's cells
         self.normalsSun = normalsCalcSun.GetOutput().GetCellData().GetNormals()
@@ -304,15 +309,10 @@ class QMeshViewer(QtWidgets.QFrame):
                 dummy_vectors.InsertNextTuple(normalModel)
                 
                 ac, lines = addLine(self.renderer, pointSun, pointsInter[0], color=sun_ray_color)
+                
+                # Render intersection points
+                ac_point, point_hit = addPoint(self.renderer, pointsInter[0], radius=intersect_radius, color=[0.,0.,1.], resolution=point_resolution)
 
-            else:
-                ac, lines = addLine(self.renderer, pointSun, pointRayTarget, color=sun_ray_color, opacity=0.25)
-                
-            self.lines_hit.append((ac, lines))
-            self.renderer.AddActor(ac)
-        #         # Render intersection points
-        #         addPoint(self.renderer, pointsInter[0], radius=1.0, color=[0.,0.,1.])
-                
         #         #region display boucing ray DOESNT WORK
         #         # # Calculate the incident ray vector
         #         # vecInc = n2l(l2n(pointRayTarget) - l2n(pointSun))
@@ -325,6 +325,15 @@ class QMeshViewer(QtWidgets.QFrame):
         #         # # Render lines/rays bouncing off earth with a 'ColorRayReflected' color
         #         # a, _ = addLine(self.renderer, pointsInter[0], pointRayReflectedTarget, [1,1,1])
         #         # self.renderer.AddActor(a)
+            else:
+                ac, lines = addLine(self.renderer, pointSun, pointRayTarget, color=sun_ray_color, opacity=0.25)
+                ac_point, point_hit = addPoint(self.renderer, pointRayTarget, radius=intersect_radius, color=sun_ray_color, resolution=point_resolution)
+                
+            self.lines_hit.append((ac, lines))
+            self.renderer.AddActor(ac)
+            
+            self.points_hit.append((ac_point, point_hit))
+
         #         #endregion
 
         # # Assign the dummy points to the dummy polydata
@@ -413,7 +422,7 @@ class QMeshViewer(QtWidgets.QFrame):
                 self.intersect_list.clear() #we clear the array
 
             for p in current_position_list:
-                self.intersect_list.append(addPoint(self.renderer, p, radius=2.0, color=[0.0, 0.0, 1.0]))
+                self.intersect_list.append(addPoint(self.renderer, p, radius=2.0, color=intersect_color))
                     
         else:
             # print("Same number of points")
@@ -443,23 +452,35 @@ class QMeshViewer(QtWidgets.QFrame):
         #     normalSun = self.normalsSun.GetTuple(idx)
 
             
-        for idx, ((ac, line), point) in enumerate(zip(self.lines_hit, self.cellCenterSun)):
+        for idx, ((ac, line),
+                  centerPoint,
+                  (ac_pointHit, pointHit)) in enumerate(zip(self.lines_hit,
+                                                                      self.cellCenterSun,
+                                                                      self.points_hit)):
             pos = pointsCellCentersSun.GetPoint(idx)
             self.cellCenterSun[idx].SetCenter(pos)
             pointSun = pointsCellCentersSun.GetPoint(idx)
             normalSun = self.normalsSun.GetTuple(idx)
             
-            pos = point.GetCenter()
+            pos = centerPoint.GetCenter()
             line.SetPoint1(pos)
 
             pointRayTarget = n2l(l2n(pointSun) + RayCastLength*l2n(normalSun))
             line.SetPoint2(pointRayTarget)
 
+            
             if isHit(self.obbTree, line.GetPoint1(), line.GetPoint2()):
                 #Change color
                 ac.GetProperty().SetOpacity(1)
+                
+                pointsInter, cellIdsInter = GetIntersect(self.obbTree, pointSun, pointRayTarget)
+                pointHit.SetCenter(pointsInter[0])
+                ac_pointHit.GetProperty().SetColor(intersect_color)
             else:
                 ac.GetProperty().SetOpacity(0.25)
+                
+                pointHit.SetCenter(pointRayTarget)
+                ac_pointHit.GetProperty().SetColor(sun_ray_color)
                 
                 # pointsInter, cellIdsInter = GetIntersect(self.obbTree, pointSun, pointRayTarget)
                 # normalModel = self.normalsModel.GetTuple(cellIdsInter[0])

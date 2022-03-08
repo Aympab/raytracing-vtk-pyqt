@@ -32,12 +32,12 @@ def addLine(renderer, p1, p2, color=[0.0, 0.0, 1.0], opacity=1):
     
     return actor, line
 
-def addPoint(renderer, p, radius=5.0, color=[0.0, 0.0, 0.0]):
+def addPoint(renderer, p, radius=5.0, color=[0.0, 0.0, 0.0], resolution=100):
     point = vtk.vtkSphereSource()
     point.SetCenter(p)
     point.SetRadius(radius)
-    point.SetPhiResolution(100)
-    point.SetThetaResolution(100)
+    point.SetPhiResolution(resolution)
+    point.SetThetaResolution(resolution)
 
     mapper = vtk.vtkPolyDataMapper()
     mapper.SetInputConnection(point.GetOutputPort())
