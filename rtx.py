@@ -1,10 +1,15 @@
+from cmath import sin, tan
 from hashlib import new
+from tkinter.tix import DirTree
 import vtk
 from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 from PyQt5 import uic, QtWidgets
 from PyQt5.QtCore import QObject
 from readVTP import *
-import webbrowser
+# from rich.progress import Progress
+from tqdm import tqdm
+import matplotlib.pyplot as plt
+
 from vtkmodules.vtkRenderingCore import (
     vtkActor,
     vtkPolyDataMapper,
@@ -36,8 +41,8 @@ model = "models/Nuclear_Power_Plant_v1/10078_Nuclear_Power_Plant_v1_L3.obj"
 
 light_x = 0.0
 light_y = 50.0
-light_z = 50.0
-sun_resolution = 6
+light_z = 200.0
+sun_resolution = 4
 sun_color = [1.0, 0.986, 0.24]
 sun_ray_color = [1.0, 1.0, 0.24]
 RayCastLength = 500.0
@@ -49,10 +54,11 @@ intersect_radius = 2.5
 camera_focus = [0,0,0]
 
 
-width = 128
-height = 128
+# width = 256
 
-ratio = 10 * float(width) / height
+# height = 128
+
+#ratio = 10 * float(width) / height
 # screen_offset = ()
 # screen = (-1, 1 / ratio, 1, -1 / ratio) # left, top, right, bottom
 
@@ -102,6 +108,10 @@ class ViewersApp(QtWidgets.QMainWindow):
         self.ui.cameraPos_y.valueChanged.connect(self.vtk_widget.cam_pos_y)
         self.ui.cameraPos_z.valueChanged.connect(self.vtk_widget.cam_pos_z)
         
+        self.ui.button_RTX.clicked.connect(self.vtk_widget.compute_RTX)
+        self.ui.width.valueChanged.connect(self.vtk_widget.change_width)
+        self.ui.height.valueChanged.connect(self.vtk_widget.change_height)
+        
     def initialize(self):
         self.vtk_widget.start()
 #endregion
@@ -128,6 +138,7 @@ class QMeshViewer(QtWidgets.QFrame):
         self.renderer.SetBackground(colors.GetColor3d("DarkGreen"))
 
 
+        self.renderer.GetActiveCamera().SetPosition(0,0,500)
         #################################
         ## POWERPLANT
         # powerplant_reader, powerplant_actor = modelFromFile(model)  
@@ -167,13 +178,13 @@ class QMeshViewer(QtWidgets.QFrame):
         #################################
         ## sun_ball BALL TO SHOW WHERE IS LIGHT
         #################################
-        sun_actor, self.sun_ball = addPoint(self.renderer, self.pos_Light, color=sun_color)
+        self.sun_actor, self.sun_ball = addPoint(self.renderer, self.pos_Light, color=sun_color)
         self.sun_ball.SetPhiResolution(sun_resolution)
         self.sun_ball.SetThetaResolution(sun_resolution)
-        # self.sun_ball.SetStartPhi(90) #to cut half a sphere
+        self.sun_ball.SetStartPhi(90) #to cut half a sphere
         # print(self.sun_ball.GetSt)
-        sun_actor.GetProperty().EdgeVisibilityOn()  # show edges/wireframe
-        sun_actor.GetProperty().SetEdgeColor([0.,0.,0.])  
+        self.sun_actor.GetProperty().EdgeVisibilityOn()  # show edges/wireframe
+        self.sun_actor.GetProperty().SetEdgeColor([0.,0.,0.])  
         self.sunOffset = 0.0
 
 
@@ -222,11 +233,11 @@ class QMeshViewer(QtWidgets.QFrame):
         glyphMapperSun.SetInputConnection(glyphSun.GetOutputPort())
 
         # Create an actor for the arrow-glyphs
-        glyphActorSun = vtk.vtkActor()
-        glyphActorSun.SetMapper(glyphMapperSun)
-        glyphActorSun.GetProperty().SetColor(sun_color)
+        self.glyphActorSun = vtk.vtkActor()
+        self.glyphActorSun.SetMapper(glyphMapperSun)
+        self.glyphActorSun.GetProperty().SetColor(sun_color)
         # Add actor
-        self.renderer.AddActor(glyphActorSun)
+        self.renderer.AddActor(self.glyphActorSun)
 
         #################################
         #Center point of cells of the sun
@@ -254,43 +265,37 @@ class QMeshViewer(QtWidgets.QFrame):
 
 
         #################################
-        #RTX COMPUTING
+        #LIVE RTX COMPUTING
         # #################################
         # Create a new 'vtkPolyDataNormals' and connect to our model
         normalsCalcModel = vtk.vtkPolyDataNormals()
         normalsCalcModel.SetInputConnection(powerplant_reader.GetOutputPort())
-        
-        # Disable normal calculation at cell vertices
         normalsCalcModel.ComputePointNormalsOff()
-        # Enable normal calculation at cell centers
         normalsCalcModel.ComputeCellNormalsOn()
-        # Disable splitting of sharp edges
         normalsCalcModel.SplittingOff()
-        # Disable global flipping of normal orientation
         normalsCalcModel.FlipNormalsOff()
-        # Enable automatic determination of correct normal orientation
         normalsCalcModel.AutoOrientNormalsOn()
-        # Perform calculation
         normalsCalcModel.Update()
 
-
+        # Create a dummy 'vtkPoints' to act as a container for the point coordinates
+        # where intersections are found
+        self.dummy_points = vtk.vtkPoints()
+        # Create a dummy 'vtkDoubleArray' to act as a container for the normal
+        # vectors where intersections are found
+        self.dummy_vectors = vtk.vtkDoubleArray()
+        self.dummy_vectors.SetNumberOfComponents(3)
+        # Create a dummy 'vtkPolyData' to store points and normals
+        self.dummy_polydata = vtk.vtkPolyData()
+        
+        
         self.lines_hit = []
         self.points_hit = []
+        self.lines_bounce = []
 
         # Extract the normal-vector data at the sun's cells
         self.normalsSun = normalsCalcSun.GetOutput().GetCellData().GetNormals()
         # Extract the normal-vector data at the earth's cells
         self.normalsModel = normalsCalcModel.GetOutput().GetCellData().GetNormals()
-
-        # Create a dummy 'vtkPoints' to act as a container for the point coordinates
-        # where intersections are found
-        dummy_points = vtk.vtkPoints()
-        # Create a dummy 'vtkDoubleArray' to act as a container for the normal
-        # vectors where intersections are found
-        dummy_vectors = vtk.vtkDoubleArray()
-        dummy_vectors.SetNumberOfComponents(3)
-        # Create a dummy 'vtkPolyData' to store points and normals
-        dummy_polydata = vtk.vtkPolyData()
 
         # Loop through all of sun's cell-centers
         for idx in range(pointsCellCentersSun.GetNumberOfPoints()):
@@ -306,69 +311,52 @@ class QMeshViewer(QtWidgets.QFrame):
             if isHit(self.obbTree, pointSun, pointRayTarget):
                 # Retrieve coordinates of intersection points and intersected cell ids
                 pointsInter, cellIdsInter = GetIntersect(self.obbTree, pointSun, pointRayTarget)
+
                 # Get the normal vector at the earth cell that intersected with the ray
-                normalModel = self.normalsModel.GetTuple(cellIdsInter[0])
-                
+                normalModel =  self.normalsModel.GetTuple(cellIdsInter[0])
+                print(normalModel)
                 # Insert the coordinates of the intersection point in the dummy container
-                dummy_points.InsertNextPoint(pointsInter[0])
+                self.dummy_points.InsertNextPoint(pointsInter[0])
                 # Insert the normal vector of the intersection cell in the dummy container
-                dummy_vectors.InsertNextTuple(normalModel)
-                
-                ac, lines = addLine(self.renderer, pointSun, pointsInter[0], color=sun_ray_color)
-                
+                self.dummy_vectors.InsertNextTuple(normalModel)
+
+                ac, line = addLine(self.renderer, pointSun, pointsInter[0], color=sun_ray_color)
                 # Render intersection points
                 ac_point, point_hit = addPoint(self.renderer, pointsInter[0], radius=intersect_radius, color=[0.,0.,1.], resolution=point_resolution)
 
-                #region display boucing ray DOESNT WORK
-                # # Calculate the incident ray vector
-                vecInc = n2l(l2n(pointRayTarget) - l2n(pointSun))
-                # Calculate the reflected ray vector
-                vecRef = calcVecR(vecInc, normalModel)
-                
-                # # Calculate the 'target' of the reflected ray based on 'RayCastLength'
-                # pointRayReflectedTarget = n2l(l2n(pointsInter[0]) + RayCastLength*l2n(vecRef))
-
-                # # Render lines/rays bouncing off earth with a 'ColorRayReflected' color
-                # a, _ = addLine(self.renderer, pointsInter[0], pointRayReflectedTarget, [1,1,1])
-                # self.renderer.AddActor(a)
             else:
-                ac, lines = addLine(self.renderer, pointSun, pointRayTarget, color=sun_ray_color, opacity=0.25)
+                ac, line = addLine(self.renderer, pointSun, pointRayTarget, color=sun_ray_color, opacity=0.25)
                 ac_point, point_hit = addPoint(self.renderer, pointRayTarget, radius=intersect_radius, color=sun_ray_color, resolution=point_resolution)
-                
-            self.lines_hit.append((ac, lines))
+
+            self.lines_hit.append((ac, line))
             self.renderer.AddActor(ac)
             
+
             self.points_hit.append((ac_point, point_hit))
 
-        #         #endregion
-
-
-        #################################
-        #DISPLAY REBOUNCING RAYS
-        #################################
-        # # Assign the dummy points to the dummy polydata
-        # dummy_polydata.SetPoints(dummy_points)
-        # # Assign the dummy vectors to the dummy polydata
-        # dummy_polydata.GetPointData().SetNormals(dummy_vectors)
+        # Assign the dummy points to the dummy polydata
+        self.dummy_polydata.SetPoints(self.dummy_points)
+        # Assign the dummy vectors to the dummy polydata
+        self.dummy_polydata.GetPointData().SetNormals(self.dummy_vectors)
                 
-        # # Visualize normals as done previously but using 
-        # # the 'dummyPolyData'
-        # arrow = vtk.vtkArrowSource()
+        # Visualize normals as done previously but using 
+        # the 'dummyPolyData'
+        self.glyphModel = vtk.vtkGlyph3D()
+        self.glyphModel.SetInputData(self.dummy_polydata)
+        self.glyphModel.SetSourceConnection(arrow.GetOutputPort())
+        self.glyphModel.SetVectorModeToUseNormal()
+        self.glyphModel.SetScaleFactor(20)
 
-        # glyphEarth = vtk.vtkGlyph3D()
-        # glyphEarth.SetInputData(dummy_polydata)
-        # glyphEarth.SetSourceConnection(arrow.GetOutputPort())
-        # glyphEarth.SetVectorModeToUseNormal()
-        # glyphEarth.SetScaleFactor(5)
+        self.glyphMapperModel = vtk.vtkPolyDataMapper()
+        self.glyphMapperModel.SetInputConnection(self.glyphModel.GetOutputPort())
 
-        # glyphMapperEarth = vtk.vtkPolyDataMapper()
-        # glyphMapperEarth.SetInputConnection(glyphEarth.GetOutputPort())
+        self.glyphActorModel = vtk.vtkActor()
+        self.glyphActorModel.SetMapper(self.glyphMapperModel)
+        self.glyphActorModel.GetProperty().SetColor(intersect_color)
 
-        # glyphActorEarth = vtk.vtkActor()
-        # glyphActorEarth.SetMapper(glyphMapperEarth)
-        # glyphActorEarth.GetProperty().SetColor([0,0,1])
+        self.renderer.AddActor(self.glyphActorModel)
 
-        # self.renderer.AddActor(glyphActorEarth)
+        #endregion
 
 
         #################################
@@ -386,9 +374,9 @@ class QMeshViewer(QtWidgets.QFrame):
         #################################
         x,y,z,normal = self.compute_plane_pos()
         self.pointsScreen = []
-        self.pointsScreen.append(addPoint(self.renderer, (x, y+ratio, z+ratio), radius=0.001, resolution=1))
-        self.pointsScreen.append(addPoint(self.renderer, (x, y-ratio, z+ratio), radius=0.001, resolution=1))
-        self.pointsScreen.append(addPoint(self.renderer, (x, y+ratio, z-ratio), radius=0.001, resolution=1))
+        self.pointsScreen.append(addPoint(self.renderer, (x, y+10, z+10), radius=0.001, resolution=1))
+        self.pointsScreen.append(addPoint(self.renderer, (x, y-10, z+10), radius=0.001, resolution=1))
+        self.pointsScreen.append(addPoint(self.renderer, (x, y+10, z-10), radius=0.001, resolution=1))
         # self.pointsScreen.append(addPoint(self.renderer, (x, y-ratio, z-ratio), radius=0.001, resolution=1))
 
         p = [point[1].GetCenter() for point in self.pointsScreen]
@@ -397,11 +385,11 @@ class QMeshViewer(QtWidgets.QFrame):
         plane_source.SetOrigin(p[0])
         plane_source.SetPoint1(p[1])
         plane_source.SetPoint2(p[2])
-        plane_source.SetNormal(normal)
+        # plane_source.SetNormal(normal)
         plane_source.SetResolution(10, 20)
         # plane_source.SetRepresentation(1)
         plane_source.Update()
-        
+
         plane_mapper = vtkPolyDataMapper()
         plane_mapper.SetInputConnection(plane_source.GetOutputPort())
         plane_actor = vtkActor()
@@ -415,6 +403,8 @@ class QMeshViewer(QtWidgets.QFrame):
         print("Number of lines : ", len(self.lines_hit))
         self.render_window.Render()
         self.intersect_list = []
+        self.pic_width = 4
+        self.pic_height = 2
 
 #region methods
 ################################################################################
@@ -445,7 +435,6 @@ class QMeshViewer(QtWidgets.QFrame):
 
         self.powerplant_actor.SetTexture(texture)
         self.render_window.Render()
-        
 
     #intersections, moving cell centers, changing focal point of light
     def update_components(self):
@@ -481,15 +470,18 @@ class QMeshViewer(QtWidgets.QFrame):
         if self.followTarget : self.light.SetFocalPoint(self.pos_Camera)
         
         
+        self.dummy_points.Reset()
+        self.dummy_vectors.Reset()
+        
+        # dummy_points = vtk.vtkPoints()
+        # dummy_vectors
+        
+        
         #Move the sun's center cell as well
         #Move the ray casting lines
         self.cellCenterCalcSun.Update()
         pointsCellCentersSun = self.cellCenterCalcSun.GetOutput(0)
         
-        dummy_points = vtk.vtkPoints()
-        dummy_vectors = vtk.vtkDoubleArray()
-        dummy_vectors.SetNumberOfComponents(3)
-
         for idx, ((ac, line),
                   centerPoint,
                   (ac_pointHit, pointHit)) in enumerate(zip(self.lines_hit,
@@ -514,39 +506,47 @@ class QMeshViewer(QtWidgets.QFrame):
                 pointsInter, cellIdsInter = GetIntersect(self.obbTree, pointSun, pointRayTarget)
                 pointHit.SetCenter(pointsInter[0])
                 ac_pointHit.GetProperty().SetColor(intersect_color)
+                
+                normalModel = self.normalsModel.GetTuple(idx)
+                
+                self.dummy_points.InsertNextPoint(pointsInter[0])
+                self.dummy_vectors.InsertNextTuple(n2l(l2n(self.pos_Camera)-l2n(pos)))
+                
             else:
                 ac.GetProperty().SetOpacity(0.25)
                 
                 pointHit.SetCenter(pointRayTarget)
                 ac_pointHit.GetProperty().SetColor(sun_ray_color)
-                
-                # pointsInter, cellIdsInter = GetIntersect(self.obbTree, pointSun, pointRayTarget)
-                # normalModel = self.normalsModel.GetTuple(cellIdsInter[0])
-                
-                # dummy_points.InsertNextPoint(pointsInter[0])
-                # dummy_vectors.InsertNextTuple(normalModel)
-                
-                # # hit_count += 1
-                # ac, lines = addLine(self.renderer, pointSun, pointsInter[0], color=[0.0,0.0,1.0])
-                # self.lines_hit.append((ac, lines))
-                # self.renderer.AddActor(ac)
 
-
+        # Assign the dummy points to the dummy polydata
+        self.dummy_polydata.SetPoints(self.dummy_points)
+        # Assign the dummy vectors to the dummy polydata
+        self.dummy_polydata.GetPointData().SetNormals(self.dummy_vectors)
+        
+        arrow = vtk.vtkArrowSource()
+        self.glyphModel.SetInputData(self.dummy_polydata)
+        self.glyphModel.SetSourceConnection(arrow.GetOutputPort())
+        # self.glyphModel.SetVectorModeToUseNormal()
+        
+        self.glyphMapperModel.SetInputConnection(self.glyphModel.GetOutputPort())
+        # self.glyphActorModel.SetMapper(glyphMapperModel)
+        
         #Update screen position
         x,y,z,normal = self.compute_plane_pos()
         
-        self.pointsScreen[0][1].SetCenter((x, y+ratio, z+ratio))
-        self.pointsScreen[1][1].SetCenter((x, y-ratio, z+ratio))
-        self.pointsScreen[2][1].SetCenter((x, y+ratio, z-ratio))
+        self.pointsScreen[0][1].SetCenter((x, y+10, z+10))
+        self.pointsScreen[1][1].SetCenter((x, y-10, z+10))
+        self.pointsScreen[2][1].SetCenter((x, y+10, z-10))
         
         p = [point[1].GetCenter() for point in self.pointsScreen]
         
         self.screen_plane[1].SetOrigin(p[0])
         self.screen_plane[1].SetPoint1(p[1])
         self.screen_plane[1].SetPoint2(p[2])
-        self.screen_plane[1].SetNormal(normal)
+        # self.screen_plane[1].SetNormal(normal)
 
         #END update_components
+        ######################
 
     def previewShadows(self, new_value):
         if new_value :
@@ -557,6 +557,9 @@ class QMeshViewer(QtWidgets.QFrame):
                 self.renderer.RemoveActor(acLine)
                 self.renderer.RemoveActor(acPoint)
 
+            self.renderer.RemoveActor(self.glyphActorModel)
+            self.renderer.RemoveActor(self.glyphActorSun)
+            # self.renderer.RemoveActor()
             # #we add an offset to the light pos or else we have
             # #the shadows of the sun's normals (arrows on the sphere)
             self.sunOffset = 10 
@@ -567,15 +570,18 @@ class QMeshViewer(QtWidgets.QFrame):
             self.renderer.UseShadowsOff()
             self.renderer.AddActor(self.line_actor)
             self.sunOffset = 0.0
-            
             for ((acLine, _), (acPoint, _)) in zip(self.lines_hit, self.points_hit):
                 self.renderer.AddActor(acLine)
                 self.renderer.AddActor(acPoint)
+
+            self.renderer.AddActor(self.glyphActorModel)
+            self.renderer.AddActor(self.glyphActorSun)
 
         x = self.light.GetPosition()[0]
         y = self.light.GetPosition()[1]
         z = self.light.GetPosition()[2]
         
+        self.light.SetConeAngle(40)
 
         #Rechange the position with the right offset
         self.sun_ball.SetCenter(x, y, z+self.sunOffset)
@@ -733,7 +739,112 @@ class QMeshViewer(QtWidgets.QFrame):
         z += normal[2] * offset
         
         return x, y ,z, normal
+
+    def change_width(self, new_value):
+        self.pic_width = new_value
+
+    def change_height(self, new_value):
+        self.pic_height = new_value
+
+    def compute_RTX(self, max_depth=5):
+        #remove sphere to avoid ray castings on it
+        self.renderer.RemoveActor(self.sun_actor)
+        self.renderer.RemoveActor(self.glyphActorSun)
+        self.render_window.Render()
         
+        cam = self.renderer.GetActiveCamera()
+        originPos = cam.GetPosition()
+        focal = cam.GetFocalPoint()
+        clipping = cam.GetClippingRange()
+        viewup = cam.GetViewUp()
+        distance = cam.GetDistance()
+
+        height = self.pic_height
+        width = self.pic_width
+        ratio = float(width) / height
+        
+        screen = (-1, 1 / ratio, 1, -1 / ratio)
+        
+        image = np.zeros((height, width, 3))
+        cpt = 0
+        
+        #     # Pour chaque pixel de l'image {
+        for i, y in tqdm(enumerate(np.linspace(screen[1], screen[3], height))):
+            for j, x in tqdm(enumerate(np.linspace(screen[0], screen[2], width))):
+                pixelPos = (x, y, 0)
+
+                direction = l2n(focal) - l2n(originPos)
+
+                pixelColor = (0,0,0)
+                reflection = 1
+
+                # Créer un rayon qui, de l'oeil, passe par ce pixel
+                ray = vtk.vtkLineSource()
+                ray.SetPoint1(originPos)
+
+                pointRayTarget = n2l(l2n(originPos) + RayCastLength*direction)
+                ray.SetPoint2(pointRayTarget)
+
+                if isHit(self.obbTree, originPos, pointRayTarget):
+                    pointsInter, cellIdsInter = GetIntersect(self.obbTree,
+                                                             originPos,
+                                                             pointRayTarget)
+                    
+                    normalModel = self.normalsModel.GetTuple(cellIdsInter[0])
+                    
+                    vecInc = n2l(l2n(pointRayTarget) - l2n(self.pos_Light))
+                    # Calculate the reflected ray vector
+                    vecRef = calcVecR(vecInc, normalModel)
+                    pointRayReflectedTarget = n2l(l2n(pointsInter[0]) + RayCastLength*l2n(vecRef))
+                    
+                    distance_to_light = l2n(self.pos_Light) - l2n(pointRayReflectedTarget)
+                    print("Distance to light : ", distance_to_light)
+
+                    # pixelColor = 
+
+
+                    # if isHit(self.obbTree, pointRayTarget, pointRayReflectedTarget):
+                        
+
+                else:
+                    pixelColor = self.renderer.GetBackground()
+
+                # for k in range(max_depth):
+                image[i, j] = pixelColor
+                    
+
+                #si 0 points d'intersections :
+                    # Couleur ce pixel avec la couleur d'arrière-plan
+
+                #sinon 
+                
+                    # Envoyer un rayon au niveau de chaque source de lumière pour tester si elle est à l'ombre
+                    # Si la surface est réfléchissante, le faisceau réfléchi génère: (récursion)
+                    # Si la surface est transparente, il génère le rayon réfracté: (récursion)
+                    # }
+                    # Dans le cas contraire {}
+                    # Utilisez « NearestObject » et « NearestT » pour calculer la couleur
+                    # Couleur ce pixel avec la couleur résultant
+                    # }
+                    # }
+
+        print("Generating picture...")
+        for i in tqdm(range(1000000)):
+            a = sin(i) * tan(i)
+            
+        plt.imsave("output.png", image)
+        
+        self.renderer.AddActor(self.sun_actor)
+        self.renderer.AddActor(self.glyphActorSun)
+        self.render_window.Render()
+
+        print("Done !")
+        # print("pos:", position)
+        # print("focal:", focal)
+        # print("clipping:", clipping)
+        # print("viewup:", viewup)
+        # print("distance:", distance)
+        # print("#############")
         
 #endregion
 
@@ -755,3 +866,28 @@ if __name__ == "__main__":
     main_window.show()
     main_window.initialize()
     app.exec_()
+    
+    
+    
+# Pour chaque pixel de l'image {
+#     Créer un rayon qui, de l'œil, passe par ce pixel
+#     Initialiser « NearestT » à « INFINITY » et « NearestObject » à « NULL »
+
+#     Pour chaque objet de la scène {
+#         Si le faisceau frappe cet objet {
+#             Si la distance « t » est inférieur à « NearestT » {
+#                 Set "NearestT" à "t"
+#                 Set « NearestObject » à cet objet
+#             }
+#         }
+#     }
+#     Si "NearestObject" est "NULL" {
+#           Couleur ce pixel avec la couleur d'arrière-plan
+#      Dans le cas contraire {}
+#           Envoyer un rayon au niveau de chaque source de lumière pour tester si elle est à l'ombre
+#           Si la surface est réfléchissante, le faisceau réfléchi génère: (récursion)
+#           Si la surface est transparente, il génère le rayon réfracté: (récursion)
+#           Utilisez « NearestObject » et « NearestT » pour calculer la couleur
+#           Couleur ce pixel avec la couleur résultant
+#       }
+#   }

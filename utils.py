@@ -120,7 +120,7 @@ def GetIntersect(obbTree, pSource, pTarget):
     
     return pointsInter, cellIdsInter
 
-# def compute_rtx(resolution = 256):
+# def compute_rtx(scene, cameraP, cameraFocus, lightP, resolution = 256):
     
 # Pour chaque pixel de l'image {
 # Créer un rayon qui, de l'œil, passe par ce pixel
