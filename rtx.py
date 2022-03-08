@@ -154,7 +154,7 @@ class QMeshViewer(QtWidgets.QFrame):
         # #     addPoint(self.renderer, pointsCellCentersSun.GetPoint(idx), [1,1,0])
 
 
-
+        ##SUN's NORMALS
         # # Create a new 'vtkPolyDataNormals' and connect to the 'sun' half-sphere
         normalsCalcSun = vtk.vtkPolyDataNormals()
         normalsCalcSun.SetInputConnection(self.sun_ball.GetOutputPort())
@@ -216,6 +216,24 @@ class QMeshViewer(QtWidgets.QFrame):
         self.obbTree.SetDataSet(powerplant_reader.GetOutput())
         self.obbTree.BuildLocator()
 
+
+
+        # Create a new 'vtkPolyDataNormals' and connect to the 'earth' sphere
+        normalsCalcEarth = vtk.vtkPolyDataNormals()
+        normalsCalcEarth.SetInputConnection(powerplant_reader.GetOutputPort())
+
+        # Disable normal calculation at cell vertices
+        normalsCalcEarth.ComputePointNormalsOff()
+        # Enable normal calculation at cell centers
+        normalsCalcEarth.ComputeCellNormalsOn()
+        # Disable splitting of sharp edges
+        normalsCalcEarth.SplittingOff()
+        # Disable global flipping of normal orientation
+        normalsCalcEarth.FlipNormalsOff()
+        # Enable automatic determination of correct normal orientation
+        normalsCalcEarth.AutoOrientNormalsOn()
+        # Perform calculation
+        normalsCalcEarth.Update()
 
         self.render_window.Render()
         self.intersect_list = []
@@ -285,30 +303,39 @@ class QMeshViewer(QtWidgets.QFrame):
         #SHADOWS
         # self.render_window.SetMultiSamples(0) dunno but no need and it works
         if new_value :
-            #we remove the line actor so we can display shadows
+            # #we remove the line actor so we can display shadows
             self.renderer.RemoveActor(self.line_actor)
             
-            #we add an offset to the light pos or else we have
-            #the shadows of the sun's normals (arrows on the sphere)
+            # #we add an offset to the light pos or else we have
+            # #the shadows of the sun's normals (arrows on the sphere)
             self.sunOffset = 10 
 
-            shadows = vtkShadowMapPass()
-            seq = vtkSequencePass()
-            passes = vtkRenderPassCollection()
-            passes.AddItem(shadows.GetShadowMapBakerPass())
-            passes.AddItem(shadows)
-            seq.SetPasses(passes)
+            self.renderer.UseShadowsOn()
+            # shadows = vtkShadowMapPass()
+            # seq = vtkSequencePass()
+            # passes = vtkRenderPassCollection()
+            # passes.AddItem(shadows.GetShadowMapBakerPass())
+            # passes.AddItem(shadows)
+            # seq.SetPasses(passes)
 
-            cameraP = vtkCameraPass()
-            cameraP.SetDelegatePass(seq)
+            # cameraP = vtkCameraPass()
+            # cameraP.SetDelegatePass(seq)
 
-            # Tell the renderer to use our render pass pipeline
-            self.renderer.SetPass(cameraP)
+            # # Tell the renderer to use our render pass pipeline
+            # self.renderer.SetPass(cameraP)
         else :
+            # self.renderer.SetPass(None) #this lines throws an error but app still works
+            self.renderer.UseShadowsOff()
             self.renderer.AddActor(self.line_actor)
-            self.renderer.SetPass(None)
             self.sunOffset = 0.0
 
+
+        #Rechange the position with the right offset
+        x = self.light.GetPosition()[0]
+        y = self.light.GetPosition()[1]
+        z = self.light.GetPosition()[2]
+        
+        self.sun_ball.SetCenter(x, y, z+self.sunOffset)
         self.render_window.Render()
 
 

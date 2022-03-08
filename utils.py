@@ -82,3 +82,40 @@ def read_cubemap(folder_root, file_names):
     texture.MipmapOn()
     texture.InterpolateOn()
     return texture
+
+def isHit(obbTree, pSource, pTarget):
+    r"""Returns True if the line intersects with the mesh in 'obbTree'"""
+    code = obbTree.IntersectWithLine(pSource, pTarget, None, None)
+    if code==0:
+        return False
+    return True
+
+def GetIntersect(obbTree, pSource, pTarget):
+    
+    # Create an empty 'vtkPoints' object to store the intersection point coordinates
+    points = vtk.vtkPoints()
+    # Create an empty 'vtkIdList' object to store the ids of the cells that intersect
+    # with the cast rays
+    cellIds = vtk.vtkIdList()
+    
+    # Perform intersection
+    code = obbTree.IntersectWithLine(pSource, pTarget, points, cellIds)
+    
+    # Get point-data 
+    pointData = points.GetData()
+    # Get number of intersection points found
+    noPoints = pointData.GetNumberOfTuples()
+    # Get number of intersected cell ids
+    noIds = cellIds.GetNumberOfIds()
+    
+    assert (noPoints == noIds)
+    
+    # Loop through the found points and cells and store
+    # them in lists
+    pointsInter = []
+    cellIdsInter = []
+    for idx in range(noPoints):
+        pointsInter.append(pointData.GetTuple3(idx))
+        cellIdsInter.append(cellIds.GetId(idx))
+    
+    return pointsInter, cellIdsInter
