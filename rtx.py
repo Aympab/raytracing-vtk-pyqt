@@ -46,6 +46,8 @@ point_resolution = 5
 intersect_color = [0.0, 0.0, 1.0] #blue
 intersect_radius = 2.5
 
+camera_focus = [0,0,0]
+
 l2n = lambda l: np.array(l)
 n2l = lambda n: list(n)
 
@@ -237,7 +239,7 @@ class QMeshViewer(QtWidgets.QFrame):
         #################################
         self.pos_Camera = [100.0, 10.0, 30.0]
         _, self.cam_ball = addPoint(self.renderer, self.pos_Camera, color=[0.0, 1.0, 0.0])
-        self.line_actor, self.line = addLine(self.renderer, self.pos_Light, self.pos_Camera, color=[1.,0.,0.])
+        self.line_actor, self.line = addLine(self.renderer, camera_focus, self.pos_Camera, color=[1.,0.,0.])
         self.renderer.AddActor(self.line_actor) #this doesn't work with shadows
 
         #For the intersections
@@ -403,7 +405,8 @@ class QMeshViewer(QtWidgets.QFrame):
     #intersections, moving cell centers, changing focal point of light
     def update_components(self):
         pointsVTKintersection = vtk.vtkPoints()
-        code = self.obbTree.IntersectWithLine(self.pos_Light, self.pos_Camera, pointsVTKintersection, None) #None for CellID but we will need this info later
+        # code = self.obbTree.IntersectWithLine(self.pos_Light, self.pos_Camera, pointsVTKintersection, None) #None for CellID but we will need this info later
+        code = self.obbTree.IntersectWithLine(camera_focus, self.pos_Camera, pointsVTKintersection, None) #None for CellID but we will need this info later
 
         pointsVTKIntersectionData = pointsVTKintersection.GetData()
         noPointsVTKIntersection = pointsVTKIntersectionData.GetNumberOfTuples()
@@ -533,7 +536,7 @@ class QMeshViewer(QtWidgets.QFrame):
         self.sun_ball.SetCenter(new_value, y, z+self.sunOffset)
         
         self.pos_Light = [new_value, y, z]
-        self.line.SetPoint1(self.pos_Light)
+        # self.line.SetPoint1(self.pos_Light)
 
         self.update_components()
 
@@ -547,7 +550,7 @@ class QMeshViewer(QtWidgets.QFrame):
         self.sun_ball.SetCenter(x, new_value, z+self.sunOffset)
         
         self.pos_Light = [x, new_value, z]
-        self.line.SetPoint1(self.pos_Light)
+        # self.line.SetPoint1(self.pos_Light)
 
         self.update_components()
 
@@ -561,7 +564,7 @@ class QMeshViewer(QtWidgets.QFrame):
         self.sun_ball.SetCenter(x, y, new_value+self.sunOffset)
 
         self.pos_Light = [x, y, new_value]
-        self.line.SetPoint1(self.pos_Light)
+        # self.line.SetPoint1(self.pos_Light)
 
         self.update_components()
 

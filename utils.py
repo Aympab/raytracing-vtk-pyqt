@@ -119,3 +119,29 @@ def GetIntersect(obbTree, pSource, pTarget):
         cellIdsInter.append(cellIds.GetId(idx))
     
     return pointsInter, cellIdsInter
+
+# def compute_rtx(resolution = 256):
+    
+# Pour chaque pixel de l'image {
+# Créer un rayon qui, de l'œil, passe par ce pixel
+# Initialiser « NearestT » à « INFINITY » et « NearestObject » à « NULL »
+
+# Pour chaque objet de la scène {
+# Si le faisceau frappe cet objet {
+# Si la distance « t » est inférieur à « NearestT » {
+# Set "NearestT" à "t"
+# Set « NearestObject » à cet objet
+# }
+# }
+# }
+
+# Si "NearestObject" est "NULL" {
+# Couleur ce pixel avec la couleur d'arrière-plan
+# Dans le cas contraire {}
+# Envoyer un rayon au niveau de chaque source de lumière pour tester si elle est à l'ombre
+# Si la surface est réfléchissante, le faisceau réfléchi génère: (récursion)
+# Si la surface est transparente, il génère le rayon réfracté: (récursion)
+# Utilisez « NearestObject » et « NearestT » pour calculer la couleur
+# Couleur ce pixel avec la couleur résultant
+# }
+# }
