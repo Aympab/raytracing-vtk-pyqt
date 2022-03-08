@@ -159,9 +159,11 @@ class QMeshViewer(QtWidgets.QFrame):
         self.renderer.AddLight(self.light)
         self.followTarget = False #if the camera focal point is on 0,0,0 or on the target
 
-        light_actor = vtk.vtkLightActor()
-        light_actor.SetLight(self.light)
-        light_actor.AddViewPropr()
+        #To display the cone of the light
+        # light_actor = vtk.vtkLightActor()
+        # light_actor.SetLight(self.light)
+        # light_actor.AddViewPropr()
+
         #################################
         ## sun_ball BALL TO SHOW WHERE IS LIGHT
         #################################
@@ -717,14 +719,14 @@ class QMeshViewer(QtWidgets.QFrame):
         self.render_window.Render()
         
     def compute_plane_pos(self):
+        centre = self.pos_Camera
+        (x, y, z) = centre #+ quelquechose
         
         normal = (camera_focus[0]-x, camera_focus[1]-y, camera_focus[2]-x)
         normal = normal / np.linalg.norm(normal)
 
         weight, height = 30, 10
 
-        centre = self.pos_Camera
-        # (x, y, z) = centre + 
         offset = 20
         x += normal[0] * offset
         y += normal[1] * offset
