@@ -48,6 +48,14 @@ intersect_radius = 2.5
 
 camera_focus = [0,0,0]
 
+
+width = 300
+height = 200
+
+ratio = 10 * float(width) / height
+# screen_offset = ()
+# screen = (-1, 1 / ratio, 1, -1 / ratio) # left, top, right, bottom
+
 l2n = lambda l: np.array(l)
 n2l = lambda n: list(n)
 
@@ -233,15 +241,6 @@ class QMeshViewer(QtWidgets.QFrame):
             # point.SetThetaResolution(1)
             self.cellCenterSun.append(point)
 
-
-        #################################
-        #Camera (source) object settings, not the actual vtk camera
-        #################################
-        self.pos_Camera = [100.0, 10.0, 30.0]
-        _, self.cam_ball = addPoint(self.renderer, self.pos_Camera, color=[0.0, 1.0, 0.0])
-        self.line_actor, self.line = addLine(self.renderer, camera_focus, self.pos_Camera, color=[1.,0.,0.])
-        self.renderer.AddActor(self.line_actor) #this doesn't work with shadows
-
         #For the intersections
         self.obbTree = vtk.vtkOBBTree()
         self.obbTree.SetDataSet(powerplant_reader.GetOutput())
@@ -366,6 +365,35 @@ class QMeshViewer(QtWidgets.QFrame):
         #DISPLAY REBOUNCING RAYS
         #################################
 
+
+        #################################
+        #Camera (source) object settings, not the actual vtk camera
+        #################################
+        self.pos_Camera = [100.0, 10.0, 30.0]
+        _, self.cam_ball = addPoint(self.renderer, self.pos_Camera, color=[0.0, 1.0, 0.0])
+        self.line_actor, self.line = addLine(self.renderer, camera_focus, self.pos_Camera, color=[1.,0.,0.])
+        self.renderer.AddActor(self.line_actor) #this doesn't work with shadows
+
+        (x, y, z) = self.pos_Camera
+        x = x + 10
+        self.pointsScreen = []
+        self.pointsScreen.append(addPoint(self.renderer, (x, y+ratio, z+ratio), radius=0.001, resolution=1))
+        self.pointsScreen.append(addPoint(self.renderer, (x, y-ratio, z+ratio), radius=0.001, resolution=1))
+        self.pointsScreen.append(addPoint(self.renderer, (x, y-ratio, z-ratio), radius=0.001, resolution=1))
+        self.pointsScreen.append(addPoint(self.renderer, (x, y+ratio, z-ratio), radius=0.001, resolution=1))
+
+        p = [point[1].GetCenter() for point in self.pointsScreen]
+        
+        # p = [point.GetCenter() for point in p]
+        
+        self.linesScreen = []
+        self.linesScreen.append(addLine(self.renderer, p[0], p[1], ))
+        self.linesScreen.append(addLine(self.renderer, p[1], p[2], ))
+        self.linesScreen.append(addLine(self.renderer, p[2], p[3], ))
+        self.linesScreen.append(addLine(self.renderer, p[3], p[0], ))
+
+        for ac, l in self.linesScreen :
+            self.renderer.AddActor(ac)
 
         print("Number of lines : ", len(self.lines_hit))
         self.render_window.Render()
