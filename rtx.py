@@ -374,26 +374,33 @@ class QMeshViewer(QtWidgets.QFrame):
         self.line_actor, self.line = addLine(self.renderer, camera_focus, self.pos_Camera, color=[1.,0.,0.])
         self.renderer.AddActor(self.line_actor) #this doesn't work with shadows
 
-        (x, y, z) = self.pos_Camera
-        x = x + 10
+        #################################
+        #Plane (screen simulation)
+        #################################
+        x,y,z,normal = self.compute_plane_pos()
         self.pointsScreen = []
         self.pointsScreen.append(addPoint(self.renderer, (x, y+ratio, z+ratio), radius=0.001, resolution=1))
         self.pointsScreen.append(addPoint(self.renderer, (x, y-ratio, z+ratio), radius=0.001, resolution=1))
-        self.pointsScreen.append(addPoint(self.renderer, (x, y-ratio, z-ratio), radius=0.001, resolution=1))
         self.pointsScreen.append(addPoint(self.renderer, (x, y+ratio, z-ratio), radius=0.001, resolution=1))
+        # self.pointsScreen.append(addPoint(self.renderer, (x, y-ratio, z-ratio), radius=0.001, resolution=1))
 
         p = [point[1].GetCenter() for point in self.pointsScreen]
         
-        # p = [point.GetCenter() for point in p]
+        plane_source = vtk.vtkPlaneSource()
+        plane_source.SetOrigin(p[0])
+        plane_source.SetPoint1(p[1])
+        plane_source.SetPoint2(p[2])
+        plane_source.SetNormal(normal)
+        plane_source.Update()
         
-        self.linesScreen = []
-        self.linesScreen.append(addLine(self.renderer, p[0], p[1], ))
-        self.linesScreen.append(addLine(self.renderer, p[1], p[2], ))
-        self.linesScreen.append(addLine(self.renderer, p[2], p[3], ))
-        self.linesScreen.append(addLine(self.renderer, p[3], p[0], ))
+        plane_mapper = vtkPolyDataMapper()
+        plane_mapper.SetInputConnection(plane_source.GetOutputPort())
+        plane_actor = vtkActor()
+        plane_actor.SetMapper(plane_mapper)
+        plane_actor.GetProperty().SetColor([0,0,0])
 
-        for ac, l in self.linesScreen :
-            self.renderer.AddActor(ac)
+        self.renderer.AddActor(plane_actor)
+        self.screen_plane = (plane_actor, plane_source)
 
         print("Number of lines : ", len(self.lines_hit))
         self.render_window.Render()
@@ -514,7 +521,22 @@ class QMeshViewer(QtWidgets.QFrame):
                 # self.lines_hit.append((ac, lines))
                 # self.renderer.AddActor(ac)
 
+
+        #Update screen position
+        x,y,z,normal = self.compute_plane_pos()
         
+        self.pointsScreen[0][1].SetCenter((x, y+ratio, z+ratio))
+        self.pointsScreen[1][1].SetCenter((x, y-ratio, z+ratio))
+        self.pointsScreen[2][1].SetCenter((x, y+ratio, z-ratio))
+        
+        p = [point[1].GetCenter() for point in self.pointsScreen]
+        
+        self.screen_plane[1].SetOrigin(p[0])
+        self.screen_plane[1].SetPoint1(p[1])
+        self.screen_plane[1].SetPoint2(p[2])
+        self.screen_plane[1].SetNormal(normal)
+
+        #END update_components
 
     def previewShadows(self, new_value):
         if new_value :
@@ -540,12 +562,12 @@ class QMeshViewer(QtWidgets.QFrame):
                 self.renderer.AddActor(acLine)
                 self.renderer.AddActor(acPoint)
 
-
-        #Rechange the position with the right offset
         x = self.light.GetPosition()[0]
         y = self.light.GetPosition()[1]
         z = self.light.GetPosition()[2]
         
+
+        #Rechange the position with the right offset
         self.sun_ball.SetCenter(x, y, z+self.sunOffset)
         self.render_window.Render()
 #endregion
@@ -685,6 +707,21 @@ class QMeshViewer(QtWidgets.QFrame):
         self.update_components()
 
         self.render_window.Render()
+        
+    def compute_plane_pos(self):
+        x, y, z = self.pos_Camera
+        
+        normal = (camera_focus[0]-x, camera_focus[1]-y, camera_focus[2]-x)
+        normal = normal / np.linalg.norm(normal)
+
+        offset = 20
+        x += normal[0] * offset
+        y += normal[1] * offset
+        z += normal[2] * offset
+        
+        return x, y ,z, normal
+        
+        
 #endregion
 
     #END OF MAIN class QMeshViewer
