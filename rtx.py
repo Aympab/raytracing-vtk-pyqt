@@ -49,8 +49,8 @@ intersect_radius = 2.5
 camera_focus = [0,0,0]
 
 
-width = 300
-height = 200
+width = 128
+height = 128
 
 ratio = 10 * float(width) / height
 # screen_offset = ()
@@ -159,6 +159,9 @@ class QMeshViewer(QtWidgets.QFrame):
         self.renderer.AddLight(self.light)
         self.followTarget = False #if the camera focal point is on 0,0,0 or on the target
 
+        light_actor = vtk.vtkLightActor()
+        light_actor.SetLight(self.light)
+        light_actor.AddViewPropr()
         #################################
         ## sun_ball BALL TO SHOW WHERE IS LIGHT
         #################################
@@ -337,6 +340,10 @@ class QMeshViewer(QtWidgets.QFrame):
 
         #         #endregion
 
+
+        #################################
+        #DISPLAY REBOUNCING RAYS
+        #################################
         # # Assign the dummy points to the dummy polydata
         # dummy_polydata.SetPoints(dummy_points)
         # # Assign the dummy vectors to the dummy polydata
@@ -361,13 +368,11 @@ class QMeshViewer(QtWidgets.QFrame):
 
         # self.renderer.AddActor(glyphActorEarth)
 
-        #################################
-        #DISPLAY REBOUNCING RAYS
-        #################################
-
 
         #################################
-        #Camera (source) object settings, not the actual vtk camera
+        #################################
+        #Camera (source) settings, not the actual vtk camera
+        #################################
         #################################
         self.pos_Camera = [100.0, 10.0, 30.0]
         _, self.cam_ball = addPoint(self.renderer, self.pos_Camera, color=[0.0, 1.0, 0.0])
@@ -375,7 +380,7 @@ class QMeshViewer(QtWidgets.QFrame):
         self.renderer.AddActor(self.line_actor) #this doesn't work with shadows
 
         #################################
-        #Plane (screen simulation)
+        #PLANE (screen simulation)
         #################################
         x,y,z,normal = self.compute_plane_pos()
         self.pointsScreen = []
@@ -391,6 +396,8 @@ class QMeshViewer(QtWidgets.QFrame):
         plane_source.SetPoint1(p[1])
         plane_source.SetPoint2(p[2])
         plane_source.SetNormal(normal)
+        plane_source.SetResolution(10, 20)
+        # plane_source.SetRepresentation(1)
         plane_source.Update()
         
         plane_mapper = vtkPolyDataMapper()
@@ -398,6 +405,7 @@ class QMeshViewer(QtWidgets.QFrame):
         plane_actor = vtkActor()
         plane_actor.SetMapper(plane_mapper)
         plane_actor.GetProperty().SetColor([0,0,0])
+        plane_actor.GetProperty().SetRepresentationToWireframe()
 
         self.renderer.AddActor(plane_actor)
         self.screen_plane = (plane_actor, plane_source)
@@ -709,11 +717,14 @@ class QMeshViewer(QtWidgets.QFrame):
         self.render_window.Render()
         
     def compute_plane_pos(self):
-        x, y, z = self.pos_Camera
         
         normal = (camera_focus[0]-x, camera_focus[1]-y, camera_focus[2]-x)
         normal = normal / np.linalg.norm(normal)
 
+        weight, height = 30, 10
+
+        centre = self.pos_Camera
+        # (x, y, z) = centre + 
         offset = 20
         x += normal[0] * offset
         y += normal[1] * offset
