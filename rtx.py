@@ -497,21 +497,24 @@ class QMeshViewer(QtWidgets.QFrame):
             pointRayTarget = n2l(l2n(pointSun) + RayCastLength*l2n(normalSun))
 
             
-            if isHit(self.obbTree, line.GetPoint1(), line.GetPoint2()):
+            if isHit(self.obbTree, line.GetPoint1(), pointRayTarget):
                 
                 #Change color
                 ac.GetProperty().SetOpacity(1)
                 
                 pointsInter, cellIdsInter = GetIntersect(self.obbTree, pointSun, pointRayTarget)
-                pointHit.SetCenter(pointsInter[0])
                 ac_pointHit.GetProperty().SetColor(intersect_color)
                 
                 normalModel = self.normalsModel.GetTuple(idx)
+                # print(pointsInter[0])
                 
-                self.dummy_points.InsertNextPoint(pointsInter[0])
+                if(len(pointsInter) > 0):
+                    pointHit.SetCenter(pointsInter[0])
+                    self.dummy_points.InsertNextPoint(pointsInter[0])
+                    line.SetPoint2(pointsInter[0])
+                
                 self.dummy_vectors.InsertNextTuple(n2l(l2n(self.pos_Camera)-l2n(pos)))
                 
-                line.SetPoint2(pointsInter[0])
                 
             else:
                 line.SetPoint2(pointRayTarget)
@@ -805,11 +808,7 @@ class QMeshViewer(QtWidgets.QFrame):
 
                     # pixelColor = 
 
-
-                    # if isHit(self.obbTree, pointRayTarget, pointRayReflectedTarget):
-                        
                 #si point d'intersection
-                
                     # Envoyer un rayon au niveau de chaque source de lumière pour tester si elle est à l'ombre
                     # Si la surface est réfléchissante, le faisceau réfléchi génère: (récursion)
                     # Si la surface est transparente, il génère le rayon réfracté: (récursion)
@@ -819,6 +818,14 @@ class QMeshViewer(QtWidgets.QFrame):
                     # Couleur ce pixel avec la couleur résultant
                     # }
                     # }
+
+                    if isHit(self.obbTree, self.pos_Light, pointsInter[0]):
+                        print("Pas a l'ombre")
+                    else:
+                        print("A l'ombre")
+                        # pixelColor
+                    
+                
                 else:
 
                 #si 0 points d'intersections :
