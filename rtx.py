@@ -313,18 +313,18 @@ class QMeshViewer(QtWidgets.QFrame):
                 # Render intersection points
                 ac_point, point_hit = addPoint(self.renderer, pointsInter[0], radius=intersect_radius, color=[0.,0.,1.], resolution=point_resolution)
 
-        #         #region display boucing ray DOESNT WORK
-        #         # # Calculate the incident ray vector
-        #         # vecInc = n2l(l2n(pointRayTarget) - l2n(pointSun))
-        #         # # Calculate the reflected ray vector
-        #         # vecRef = calcVecR(vecInc, normalEarth)
+                #region display boucing ray DOESNT WORK
+                # # Calculate the incident ray vector
+                vecInc = n2l(l2n(pointRayTarget) - l2n(pointSun))
+                # Calculate the reflected ray vector
+                vecRef = calcVecR(vecInc, normalModel)
                 
-        #         # # Calculate the 'target' of the reflected ray based on 'RayCastLength'
-        #         # pointRayReflectedTarget = n2l(l2n(pointsInter[0]) + RayCastLength*l2n(vecRef))
+                # # Calculate the 'target' of the reflected ray based on 'RayCastLength'
+                # pointRayReflectedTarget = n2l(l2n(pointsInter[0]) + RayCastLength*l2n(vecRef))
 
-        #         # # Render lines/rays bouncing off earth with a 'ColorRayReflected' color
-        #         # a, _ = addLine(self.renderer, pointsInter[0], pointRayReflectedTarget, [1,1,1])
-        #         # self.renderer.AddActor(a)
+                # # Render lines/rays bouncing off earth with a 'ColorRayReflected' color
+                # a, _ = addLine(self.renderer, pointsInter[0], pointRayReflectedTarget, [1,1,1])
+                # self.renderer.AddActor(a)
             else:
                 ac, lines = addLine(self.renderer, pointSun, pointRayTarget, color=sun_ray_color, opacity=0.25)
                 ac_point, point_hit = addPoint(self.renderer, pointRayTarget, radius=intersect_radius, color=sun_ray_color, resolution=point_resolution)
@@ -434,24 +434,14 @@ class QMeshViewer(QtWidgets.QFrame):
         
         
         #Move the sun's center cell as well
+        #Move the ray casting lines
         self.cellCenterCalcSun.Update()
         pointsCellCentersSun = self.cellCenterCalcSun.GetOutput(0)
         
         dummy_points = vtk.vtkPoints()
         dummy_vectors = vtk.vtkDoubleArray()
         dummy_vectors.SetNumberOfComponents(3)
-        
-        
-        # hit_count = 0
-        
-        # for idx in range(pointsCellCentersSun.GetNumberOfPoints()):
-        #     pos = pointsCellCentersSun.GetPoint(idx)
-        #     self.cellCenterSun[idx].SetCenter(pos)
 
-        #     pointSun = pointsCellCentersSun.GetPoint(idx)
-        #     normalSun = self.normalsSun.GetTuple(idx)
-
-            
         for idx, ((ac, line),
                   centerPoint,
                   (ac_pointHit, pointHit)) in enumerate(zip(self.lines_hit,
@@ -493,19 +483,17 @@ class QMeshViewer(QtWidgets.QFrame):
                 # self.lines_hit.append((ac, lines))
                 # self.renderer.AddActor(ac)
 
-
-
-
-        #Move the ray casting lines
         
 
     def previewShadows(self, new_value):
-        #SHADOWS
-        # self.render_window.SetMultiSamples(0) dunno but no need and it works
         if new_value :
             # #we remove the line actor so we can display shadows
             self.renderer.RemoveActor(self.line_actor)
             
+            for ((acLine, _), (acPoint, _)) in zip(self.lines_hit, self.points_hit):
+                self.renderer.RemoveActor(acLine)
+                self.renderer.RemoveActor(acPoint)
+
             # #we add an offset to the light pos or else we have
             # #the shadows of the sun's normals (arrows on the sphere)
             self.sunOffset = 10 
@@ -516,6 +504,10 @@ class QMeshViewer(QtWidgets.QFrame):
             self.renderer.UseShadowsOff()
             self.renderer.AddActor(self.line_actor)
             self.sunOffset = 0.0
+            
+            for ((acLine, _), (acPoint, _)) in zip(self.lines_hit, self.points_hit):
+                self.renderer.AddActor(acLine)
+                self.renderer.AddActor(acPoint)
 
 
         #Rechange the position with the right offset
@@ -581,6 +573,14 @@ class QMeshViewer(QtWidgets.QFrame):
 
     def light_coneAngle(self, new_value):
         self.light.SetConeAngle(new_value)
+        
+        if(new_value < 20):
+            self.sun_ball.SetPhiResolution(new_value)
+            self.sun_ball.SetThetaResolution(new_value)
+        else :
+            self.sun_ball.SetPhiResolution(sun_resolution)
+            self.sun_ball.SetThetaResolution(sun_resolution)
+
         self.render_window.Render()
 
     def light_focalPoint(self, new_value):
