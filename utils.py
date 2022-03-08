@@ -16,7 +16,7 @@ def MakeAxesActor():
     axes.SetSphereRadius(1.5 * axes.GetSphereRadius())
     return axes
 
-def addLine(renderer, p1, p2, color=[0.0, 0.0, 1.0]):
+def addLine(renderer, p1, p2, color=[0.0, 0.0, 1.0], opacity=1):
     line = vtk.vtkLineSource()
     line.SetPoint1(p1)
     line.SetPoint2(p2)
@@ -27,7 +27,7 @@ def addLine(renderer, p1, p2, color=[0.0, 0.0, 1.0]):
     actor = vtk.vtkActor()
     actor.SetMapper(mapper)
     actor.GetProperty().SetColor(color)
-
+    actor.GetProperty().SetOpacity(opacity)
     # renderer.AddActor(actor)
     
     return actor, line
