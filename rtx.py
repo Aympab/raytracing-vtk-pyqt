@@ -39,6 +39,8 @@ light_y = 50.0
 light_z = 50.0
 sun_resolution = 6
 sun_color = [1.0, 0.986, 0.24]
+sun_ray_color = [1.0, 1.0, 0.24]
+RayCastLength = 500.0
 
 l2n = lambda l: np.array(l)
 n2l = lambda n: list(n)
@@ -150,24 +152,10 @@ class QMeshViewer(QtWidgets.QFrame):
         self.sun_ball.SetPhiResolution(sun_resolution)
         self.sun_ball.SetThetaResolution(sun_resolution)
         # self.sun_ball.SetStartPhi(90) #to cut half a sphere
+        # print(self.sun_ball.GetSt)
         sun_actor.GetProperty().EdgeVisibilityOn()  # show edges/wireframe
         sun_actor.GetProperty().SetEdgeColor([0.,0.,0.])  
         self.sunOffset = 0.0
-
-        #################################
-        #Center point of cells of the sun
-        #################################
-        cellCenterCalcSun = vtk.vtkCellCenters()
-        cellCenterCalcSun.SetInputConnection(self.sun_ball.GetOutputPort())
-
-        cellCenterCalcSun.Update()
-        # Get the point centers from 'cellCenterCalc'
-        pointsCellCentersSun = cellCenterCalcSun.GetOutput(0)
-        print(pointsCellCentersSun)
-        for idx in range(pointsCellCentersSun.GetNumberOfPoints()):
-            # print(pointsCellCentersSun.GetPoint(idx))
-            pos = pointsCellCentersSun.GetPoint(idx)
-            _, _ = addPoint(self.renderer, pos, radius=0.5, color=[1,1,0])
 
 
         #################################
@@ -221,6 +209,23 @@ class QMeshViewer(QtWidgets.QFrame):
         # Add actor
         self.renderer.AddActor(glyphActorSun)
 
+        #################################
+        #Center point of cells of the sun
+        #################################
+        self.cellCenterSun = []
+
+        self.cellCenterCalcSun = vtk.vtkCellCenters()
+        self.cellCenterCalcSun.SetInputConnection(self.sun_ball.GetOutputPort())
+
+        self.cellCenterCalcSun.Update()
+        # Get the point centers from 'cellCenterCalc'
+        pointsCellCentersSun = self.cellCenterCalcSun.GetOutput(0)
+        for idx in range(pointsCellCentersSun.GetNumberOfPoints()):
+            pos = pointsCellCentersSun.GetPoint(idx)
+            _, point = addPoint(self.renderer, pos, radius=0.5, color=sun_color)
+            point.SetPhiResolution(1)
+            point.SetThetaResolution(1)
+            self.cellCenterSun.append(point)
 
 
         #################################
@@ -240,8 +245,8 @@ class QMeshViewer(QtWidgets.QFrame):
 
         #################################
         #RTX COMPUTING
-        #################################
-        # Create a new 'vtkPolyDataNormals' and connect to the 'earth' sphere
+        # #################################
+        # Create a new 'vtkPolyDataNormals' and connect to our model
         normalsCalcModel = vtk.vtkPolyDataNormals()
         normalsCalcModel.SetInputConnection(powerplant_reader.GetOutputPort())
         
@@ -259,12 +264,12 @@ class QMeshViewer(QtWidgets.QFrame):
         normalsCalcModel.Update()
 
 
-        RayCastLength = 500.0
+        self.lines_hit = []
 
         # Extract the normal-vector data at the sun's cells
-        normalsSun = normalsCalcSun.GetOutput().GetCellData().GetNormals()
+        self.normalsSun = normalsCalcSun.GetOutput().GetCellData().GetNormals()
         # Extract the normal-vector data at the earth's cells
-        normalsEarth = normalsCalcModel.GetOutput().GetCellData().GetNormals()
+        self.normalsModel = normalsCalcModel.GetOutput().GetCellData().GetNormals()
 
         # Create a dummy 'vtkPoints' to act as a container for the point coordinates
         # where intersections are found
@@ -281,7 +286,7 @@ class QMeshViewer(QtWidgets.QFrame):
             # Get coordinates of sun's cell center
             pointSun = pointsCellCentersSun.GetPoint(idx)
             # Get normal vector at that cell
-            normalSun = normalsSun.GetTuple(idx)
+            normalSun = self.normalsSun.GetTuple(idx)
 
             # Calculate the 'target' of the ray based on 'RayCastLength'
             pointRayTarget = n2l(l2n(pointSun) + RayCastLength*l2n(normalSun))
@@ -291,63 +296,67 @@ class QMeshViewer(QtWidgets.QFrame):
                 # Retrieve coordinates of intersection points and intersected cell ids
                 pointsInter, cellIdsInter = GetIntersect(self.obbTree, pointSun, pointRayTarget)
                 # Get the normal vector at the earth cell that intersected with the ray
-                normalEarth = normalsEarth.GetTuple(cellIdsInter[0])
+                normalModel = self.normalsModel.GetTuple(cellIdsInter[0])
                 
                 # Insert the coordinates of the intersection point in the dummy container
                 dummy_points.InsertNextPoint(pointsInter[0])
                 # Insert the normal vector of the intersection cell in the dummy container
-                dummy_vectors.InsertNextTuple(normalEarth)
+                dummy_vectors.InsertNextTuple(normalModel)
                 
-                ac, _ = addLine(self.renderer, pointSun, pointsInter[0], color=[0.0,0.0,1.0])
-                self.renderer.AddActor(ac)
+                ac, lines = addLine(self.renderer, pointSun, pointsInter[0], color=sun_ray_color)
+
+            else:
+                ac, lines = addLine(self.renderer, pointSun, pointRayTarget, color=sun_ray_color, opacity=0.25)
                 
-                # Render intersection points
-                addPoint(self.renderer, pointsInter[0], radius=1.0, color=[0.,0.,1.])
+            self.lines_hit.append((ac, lines))
+            self.renderer.AddActor(ac)
+        #         # Render intersection points
+        #         addPoint(self.renderer, pointsInter[0], radius=1.0, color=[0.,0.,1.])
                 
-                #region display boucing ray DOESNT WORK
-                # # Calculate the incident ray vector
-                # vecInc = n2l(l2n(pointRayTarget) - l2n(pointSun))
-                # # Calculate the reflected ray vector
-                # vecRef = calcVecR(vecInc, normalEarth)
+        #         #region display boucing ray DOESNT WORK
+        #         # # Calculate the incident ray vector
+        #         # vecInc = n2l(l2n(pointRayTarget) - l2n(pointSun))
+        #         # # Calculate the reflected ray vector
+        #         # vecRef = calcVecR(vecInc, normalEarth)
                 
-                # # Calculate the 'target' of the reflected ray based on 'RayCastLength'
-                # pointRayReflectedTarget = n2l(l2n(pointsInter[0]) + RayCastLength*l2n(vecRef))
+        #         # # Calculate the 'target' of the reflected ray based on 'RayCastLength'
+        #         # pointRayReflectedTarget = n2l(l2n(pointsInter[0]) + RayCastLength*l2n(vecRef))
 
-                # # Render lines/rays bouncing off earth with a 'ColorRayReflected' color
-                # a, _ = addLine(self.renderer, pointsInter[0], pointRayReflectedTarget, [1,1,1])
-                # self.renderer.AddActor(a)
-                #endregion
+        #         # # Render lines/rays bouncing off earth with a 'ColorRayReflected' color
+        #         # a, _ = addLine(self.renderer, pointsInter[0], pointRayReflectedTarget, [1,1,1])
+        #         # self.renderer.AddActor(a)
+        #         #endregion
 
-        # Assign the dummy points to the dummy polydata
-        dummy_polydata.SetPoints(dummy_points)
-        # Assign the dummy vectors to the dummy polydata
-        dummy_polydata.GetPointData().SetNormals(dummy_vectors)
+        # # Assign the dummy points to the dummy polydata
+        # dummy_polydata.SetPoints(dummy_points)
+        # # Assign the dummy vectors to the dummy polydata
+        # dummy_polydata.GetPointData().SetNormals(dummy_vectors)
                 
-        # Visualize normals as done previously but using 
-        # the 'dummyPolyData'
-        arrow = vtk.vtkArrowSource()
+        # # Visualize normals as done previously but using 
+        # # the 'dummyPolyData'
+        # arrow = vtk.vtkArrowSource()
 
-        glyphEarth = vtk.vtkGlyph3D()
-        glyphEarth.SetInputData(dummy_polydata)
-        glyphEarth.SetSourceConnection(arrow.GetOutputPort())
-        glyphEarth.SetVectorModeToUseNormal()
-        glyphEarth.SetScaleFactor(5)
+        # glyphEarth = vtk.vtkGlyph3D()
+        # glyphEarth.SetInputData(dummy_polydata)
+        # glyphEarth.SetSourceConnection(arrow.GetOutputPort())
+        # glyphEarth.SetVectorModeToUseNormal()
+        # glyphEarth.SetScaleFactor(5)
 
-        glyphMapperEarth = vtk.vtkPolyDataMapper()
-        glyphMapperEarth.SetInputConnection(glyphEarth.GetOutputPort())
+        # glyphMapperEarth = vtk.vtkPolyDataMapper()
+        # glyphMapperEarth.SetInputConnection(glyphEarth.GetOutputPort())
 
-        glyphActorEarth = vtk.vtkActor()
-        glyphActorEarth.SetMapper(glyphMapperEarth)
-        glyphActorEarth.GetProperty().SetColor([0,0,1])
+        # glyphActorEarth = vtk.vtkActor()
+        # glyphActorEarth.SetMapper(glyphMapperEarth)
+        # glyphActorEarth.GetProperty().SetColor([0,0,1])
 
-        self.renderer.AddActor(glyphActorEarth)
+        # self.renderer.AddActor(glyphActorEarth)
 
         #################################
         #DISPLAY REBOUNCING RAYS
         #################################
 
 
-
+        print("Number of lines : ", len(self.lines_hit))
         self.render_window.Render()
         self.intersect_list = []
 
@@ -382,7 +391,8 @@ class QMeshViewer(QtWidgets.QFrame):
         self.render_window.Render()
         
 
-    def intersect(self):
+    #intersections, moving cell centers, changing focal point of light
+    def update_components(self):
         pointsVTKintersection = vtk.vtkPoints()
         code = self.obbTree.IntersectWithLine(self.pos_Light, self.pos_Camera, pointsVTKintersection, None) #None for CellID but we will need this info later
 
@@ -412,6 +422,61 @@ class QMeshViewer(QtWidgets.QFrame):
 
         #if the light's focal point is following the camera position
         if self.followTarget : self.light.SetFocalPoint(self.pos_Camera)
+        
+        
+        #Move the sun's center cell as well
+        self.cellCenterCalcSun.Update()
+        pointsCellCentersSun = self.cellCenterCalcSun.GetOutput(0)
+        
+        dummy_points = vtk.vtkPoints()
+        dummy_vectors = vtk.vtkDoubleArray()
+        dummy_vectors.SetNumberOfComponents(3)
+        
+        
+        # hit_count = 0
+        
+        # for idx in range(pointsCellCentersSun.GetNumberOfPoints()):
+        #     pos = pointsCellCentersSun.GetPoint(idx)
+        #     self.cellCenterSun[idx].SetCenter(pos)
+
+        #     pointSun = pointsCellCentersSun.GetPoint(idx)
+        #     normalSun = self.normalsSun.GetTuple(idx)
+
+            
+        for idx, ((ac, line), point) in enumerate(zip(self.lines_hit, self.cellCenterSun)):
+            pos = pointsCellCentersSun.GetPoint(idx)
+            self.cellCenterSun[idx].SetCenter(pos)
+            pointSun = pointsCellCentersSun.GetPoint(idx)
+            normalSun = self.normalsSun.GetTuple(idx)
+            
+            pos = point.GetCenter()
+            line.SetPoint1(pos)
+
+            pointRayTarget = n2l(l2n(pointSun) + RayCastLength*l2n(normalSun))
+            line.SetPoint2(pointRayTarget)
+
+            if isHit(self.obbTree, line.GetPoint1(), line.GetPoint2()):
+                #Change color
+                ac.GetProperty().SetOpacity(1)
+            else:
+                ac.GetProperty().SetOpacity(0.25)
+                
+                # pointsInter, cellIdsInter = GetIntersect(self.obbTree, pointSun, pointRayTarget)
+                # normalModel = self.normalsModel.GetTuple(cellIdsInter[0])
+                
+                # dummy_points.InsertNextPoint(pointsInter[0])
+                # dummy_vectors.InsertNextTuple(normalModel)
+                
+                # # hit_count += 1
+                # ac, lines = addLine(self.renderer, pointSun, pointsInter[0], color=[0.0,0.0,1.0])
+                # self.lines_hit.append((ac, lines))
+                # self.renderer.AddActor(ac)
+
+
+
+
+        #Move the ray casting lines
+        
 
     def previewShadows(self, new_value):
         #SHADOWS
@@ -425,20 +490,8 @@ class QMeshViewer(QtWidgets.QFrame):
             self.sunOffset = 10 
 
             self.renderer.UseShadowsOn()
-            # shadows = vtkShadowMapPass()
-            # seq = vtkSequencePass()
-            # passes = vtkRenderPassCollection()
-            # passes.AddItem(shadows.GetShadowMapBakerPass())
-            # passes.AddItem(shadows)
-            # seq.SetPasses(passes)
 
-            # cameraP = vtkCameraPass()
-            # cameraP.SetDelegatePass(seq)
-
-            # # Tell the renderer to use our render pass pipeline
-            # self.renderer.SetPass(cameraP)
         else :
-            # self.renderer.SetPass(None) #this lines throws an error but app still works
             self.renderer.UseShadowsOff()
             self.renderer.AddActor(self.line_actor)
             self.sunOffset = 0.0
@@ -469,7 +522,7 @@ class QMeshViewer(QtWidgets.QFrame):
         self.pos_Light = [new_value, y, z]
         self.line.SetPoint1(self.pos_Light)
 
-        self.intersect()
+        self.update_components()
 
         self.render_window.Render()
         
@@ -483,7 +536,7 @@ class QMeshViewer(QtWidgets.QFrame):
         self.pos_Light = [x, new_value, z]
         self.line.SetPoint1(self.pos_Light)
 
-        self.intersect()
+        self.update_components()
 
         self.render_window.Render()
 
@@ -497,7 +550,7 @@ class QMeshViewer(QtWidgets.QFrame):
         self.pos_Light = [x, y, new_value]
         self.line.SetPoint1(self.pos_Light)
 
-        self.intersect()
+        self.update_components()
 
         self.render_window.Render()
 
@@ -551,7 +604,7 @@ class QMeshViewer(QtWidgets.QFrame):
         self.pos_Camera = [new_value, y, z]
         self.line.SetPoint2(self.pos_Camera)
 
-        self.intersect()
+        self.update_components()
 
         self.render_window.Render()
         
@@ -564,7 +617,7 @@ class QMeshViewer(QtWidgets.QFrame):
         self.pos_Camera = [x, new_value, z]
         self.line.SetPoint2(self.pos_Camera)
 
-        self.intersect()
+        self.update_components()
 
         self.render_window.Render()
 
@@ -577,7 +630,7 @@ class QMeshViewer(QtWidgets.QFrame):
         self.pos_Camera = [x, y, new_value]
         self.line.SetPoint2(self.pos_Camera)
 
-        self.intersect()
+        self.update_components()
 
         self.render_window.Render()
 #endregion
