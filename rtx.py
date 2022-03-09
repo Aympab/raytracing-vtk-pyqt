@@ -1,36 +1,19 @@
+from asyncore import poll3
 from cmath import sin, tan
-from hashlib import new
-from tkinter.tix import DirTree
 import vtk
 from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 from PyQt5 import uic, QtWidgets
-from PyQt5.QtCore import QObject
 from readVTP import *
 # from rich.progress import Progress
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-
 from vtkmodules.vtkRenderingCore import (
     vtkActor,
     vtkPolyDataMapper,
-    vtkRenderWindow,
-    vtkRenderWindowInteractor,
-    vtkSkybox,
-    vtkCamera,
     vtkTexture,
 )
-from vtkmodules.vtkRenderingOpenGL2 import (
-    vtkCameraPass,
-    vtkRenderPassCollection,
-    vtkSequencePass,
-    vtkShadowMapPass
-)
-from vtkmodules.vtkInteractionWidgets import vtkOrientationMarkerWidget
-from vtk import vtkPNGReader, vtkJPEGReader, vtkTextureMapToSphere
+from vtk import vtkJPEGReader
 from utils import *
-from vtkmodules.vtkCommonTransforms import vtkTransform
-from vtkmodules.vtkRenderingAnnotation import vtkAxesActor
-from vtkmodules.vtkFiltersModeling import vtkOutlineFilter
 import numpy as np
 
 model = "models/Nuclear_Power_Plant_v1/10078_Nuclear_Power_Plant_v1_L3.obj"
@@ -45,22 +28,13 @@ light_z = 200.0
 sun_resolution = 4
 sun_color = [1.0, 0.986, 0.24]
 sun_ray_color = [1.0, 1.0, 0.24]
-RayCastLength = 500.0
+RayCastLength = 1000.0
 
 point_resolution = 5
 intersect_color = [0.0, 0.0, 1.0] #blue
 intersect_radius = 2.5
 
 camera_focus = [0,0,0]
-
-
-# width = 256
-
-# height = 128
-
-#ratio = 10 * float(width) / height
-# screen_offset = ()
-# screen = (-1, 1 / ratio, 1, -1 / ratio) # left, top, right, bottom
 
 l2n = lambda l: np.array(l)
 n2l = lambda n: list(n)
@@ -73,7 +47,7 @@ def calcVecR(vecInc, vecNor):
     
     return n2l(vecRef)
 
-#region superclass setup
+#region Superclass and UI setup
 class ViewersApp(QtWidgets.QMainWindow):
     def __init__(self):
         super(ViewersApp, self).__init__()
@@ -294,7 +268,7 @@ class QMeshViewer(QtWidgets.QFrame):
 
         # Extract the normal-vector data at the sun's cells
         self.normalsSun = normalsCalcSun.GetOutput().GetCellData().GetNormals()
-        # Extract the normal-vector data at the earth's cells
+        # Extract the normal-vector data at the model's cells
         self.normalsModel = normalsCalcModel.GetOutput().GetCellData().GetNormals()
 
         # Loop through all of sun's cell-centers
@@ -513,6 +487,7 @@ class QMeshViewer(QtWidgets.QFrame):
                     self.dummy_points.InsertNextPoint(pointsInter[0])
                     line.SetPoint2(pointsInter[0])
                 
+                #TODO : calculer en 3D la normale en direction de la pos caméra
                 self.dummy_vectors.InsertNextTuple(n2l(l2n(self.pos_Camera)-l2n(pos)))
                 
                 
@@ -763,8 +738,20 @@ class QMeshViewer(QtWidgets.QFrame):
         focal = cam.GetFocalPoint()
         clipping = cam.GetClippingRange()
         viewup = cam.GetViewUp()
-        distance = cam.GetDistance()
+        # plan_distance = 0.10*cam.GetDistance()
+        # directionCam = l2n(focal) - l2n(originPos) 
 
+        # directionCam = directionCam / np.linalg.norm(directionCam)
+        # plan_center = l2n(originPos) + directionCam*plan_distance
+        
+        # print("Pos origine", originPos)
+        # print("Pos focal", focal)
+        # print("distance cam", plan_distance)
+        # print("Clipping range", clipping)
+        # print("DirectionCam", directionCam)
+        # print("Viewup", viewup)
+        # print("plan center", plan_center)
+        
         height = self.pic_height
         width = self.pic_width
         ratio = float(width) / height
@@ -772,40 +759,69 @@ class QMeshViewer(QtWidgets.QFrame):
         screen = (-1, 1 / ratio, 1, -1 / ratio)
         
         image = np.zeros((height, width, 3))
-        cpt = 0
+
+        #Get the transform 
+        inv = vtk.vtkMatrix4x4()
+        cam.GetModelViewTransformMatrix().Invert(cam.GetModelViewTransformMatrix(), inv)
+        tr_mat = np.zeros((4,4))
+        for i in range(4) :
+            for j in range(4) :
+                tr_mat[i, j] = inv.GetElement(i,j)
+
+        top = np.array([0, screen[1], 0, 1])#.reshape(-1,1)
+        bottom = np.array([0, screen[3], 0, 1])#.reshape(-1,1)
+        left = np.array([screen[0], 0, 0, 1])#.reshape(-1,1)
+        right = np.array([screen[2], 0, 0, 1])#.reshape(-1,1)
+
+        top = tr_mat@top
+        bottom = tr_mat@bottom
+        left = tr_mat@left
+        right = tr_mat@right
         
+        cam_pos = np.array([0,0,1,1])#.reshape(-1,1)
+        cam_pos = tr_mat@cam_pos
+        cam_pos = (cam_pos[0], cam_pos[1], cam_pos[2])
+
+
         #     # Pour chaque pixel de l'image {
-        for i, y in tqdm(enumerate(np.linspace(screen[1], screen[3], height))):
-            for j, x in tqdm(enumerate(np.linspace(screen[0], screen[2], width))):
-                pixelPos = (x, y, 0)
-
-                direction = l2n(focal) - l2n(originPos)
-
+        for i, y in (enumerate(np.linspace(screen[1], screen[3], height))):
+            for j, x in (enumerate(np.linspace(screen[0], screen[2], width))):
+                pixelPos = l2n((x, y, 0, 1))
+                pixelPos = n2l(tr_mat@pixelPos)
+                pixelPos = (pixelPos[0], pixelPos[1], pixelPos[2])
+                print("MY PIXEL POS IS ", pixelPos)
+                
+                direction = l2n(pixelPos) - l2n(cam_pos) #TODO : Changer focal pour endroit du pixel
+                direction = direction / np.linalg.norm(direction)
+                
                 pixelColor = (0,0,0)
                 reflection = 1
 
                 # Créer un rayon qui, de l'oeil, passe par ce pixel
                 ray = vtk.vtkLineSource()
-                ray.SetPoint1(originPos)
-
-                pointRayTarget = n2l(l2n(originPos) + RayCastLength*direction)
+                ray.SetPoint1(cam_pos)
+                pointRayTarget = n2l(l2n(cam_pos) + RayCastLength*direction)
                 ray.SetPoint2(pointRayTarget)
 
-                if isHit(self.obbTree, originPos, pointRayTarget):
+                if isHit(self.obbTree, cam_pos, pointRayTarget):
                     pointsInter, cellIdsInter = GetIntersect(self.obbTree,
-                                                             originPos,
+                                                             cam_pos,
                                                              pointRayTarget)
-                    
+                    # TODO : Garder le plus proche des points d'intersect
+
                     normalModel = self.normalsModel.GetTuple(cellIdsInter[0])
-                    
-                    vecInc = n2l(l2n(pointRayTarget) - l2n(self.pos_Light))
+
+
+                    vecInc = n2l(l2n(self.pos_Light) - l2n(pointRayTarget))
                     # Calculate the reflected ray vector
                     vecRef = calcVecR(vecInc, normalModel)
                     pointRayReflectedTarget = n2l(l2n(pointsInter[0]) + RayCastLength*l2n(vecRef))
-                    
-                    distance_to_light = l2n(self.pos_Light) - l2n(pointRayReflectedTarget)
-                    print("Distance to light : ", distance_to_light)
 
+                    
+                    # distance_to_light = l2n(self.pos_Light) - l2n(pointRayReflectedTarget)
+                    # print("Distance to light : ", distance_to_light)
+
+                    #TODO :
                     # pixelColor = 
 
                 #si point d'intersection
@@ -820,9 +836,11 @@ class QMeshViewer(QtWidgets.QFrame):
                     # }
 
                     if isHit(self.obbTree, self.pos_Light, pointsInter[0]):
-                        print("Pas a l'ombre")
+                        # print("A l'ombre")
+                        print("# ombre")
                     else:
-                        print("A l'ombre")
+                        print("# pas ombre")
+                        # print("Pas a l'ombre")
                         # pixelColor
                     
                 
@@ -886,6 +904,7 @@ if __name__ == "__main__":
 #             }
 #         }
 #     }
+
 #     Si "NearestObject" est "NULL" {
 #           Couleur ce pixel avec la couleur d'arrière-plan
 #      Dans le cas contraire {}
