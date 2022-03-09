@@ -727,7 +727,7 @@ class QMeshViewer(QtWidgets.QFrame):
     def change_height(self, new_value):
         self.pic_height = new_value
 
-    def compute_RTX(self, max_depth=5):
+    def compute_RTX(self, max_depth=2):
         #remove sphere to avoid ray castings on it
         self.renderer.RemoveActor(self.sun_actor)
         self.renderer.RemoveActor(self.glyphActorSun)
@@ -738,19 +738,6 @@ class QMeshViewer(QtWidgets.QFrame):
         focal = cam.GetFocalPoint()
         clipping = cam.GetClippingRange()
         viewup = cam.GetViewUp()
-        # plan_distance = 0.10*cam.GetDistance()
-        # directionCam = l2n(focal) - l2n(originPos) 
-
-        # directionCam = directionCam / np.linalg.norm(directionCam)
-        # plan_center = l2n(originPos) + directionCam*plan_distance
-        
-        # print("Pos origine", originPos)
-        # print("Pos focal", focal)
-        # print("distance cam", plan_distance)
-        # print("Clipping range", clipping)
-        # print("DirectionCam", directionCam)
-        # print("Viewup", viewup)
-        # print("plan center", plan_center)
         
         height = self.pic_height
         width = self.pic_width
@@ -760,8 +747,11 @@ class QMeshViewer(QtWidgets.QFrame):
         
         image = np.zeros((height, width, 3))
 
+        print(f"Computing raytracing of {height} * {width} image")
+
         #Get the transform 
         inv = vtk.vtkMatrix4x4()
+        
         cam.GetModelViewTransformMatrix().Invert(cam.GetModelViewTransformMatrix(), inv)
         tr_mat = np.zeros((4,4))
         for i in range(4) :
@@ -784,24 +774,26 @@ class QMeshViewer(QtWidgets.QFrame):
 
 
         #     # Pour chaque pixel de l'image {
-        for i, y in (enumerate(np.linspace(screen[1], screen[3], height))):
-            for j, x in (enumerate(np.linspace(screen[0], screen[2], width))):
+        tabx = np.linspace(screen[0], screen[2], num=width+1)
+        tabx = (tabx[:-1] + tabx[1:]) / 2 # Get center of pixels
+        taby = np.linspace(screen[1], screen[3], num=height+1)
+        taby = (taby[:-1] + taby[1:]) / 2 # Get center of pixels
+        for i, y in (enumerate(tqdm(taby))):
+            for j, x in (enumerate(tabx)):
+
                 pixelPos = l2n((x, y, 0, 1))
                 pixelPos = n2l(tr_mat@pixelPos)
                 pixelPos = (pixelPos[0], pixelPos[1], pixelPos[2])
-                print("MY PIXEL POS IS ", pixelPos)
                 
                 direction = l2n(pixelPos) - l2n(cam_pos) #TODO : Changer focal pour endroit du pixel
                 direction = direction / np.linalg.norm(direction)
                 
                 pixelColor = (0,0,0)
-                reflection = 1
-
+                
+                
+                
                 # Créer un rayon qui, de l'oeil, passe par ce pixel
-                ray = vtk.vtkLineSource()
-                ray.SetPoint1(cam_pos)
                 pointRayTarget = n2l(l2n(cam_pos) + RayCastLength*direction)
-                ray.SetPoint2(pointRayTarget)
 
                 if isHit(self.obbTree, cam_pos, pointRayTarget):
                     pointsInter, cellIdsInter = GetIntersect(self.obbTree,
@@ -812,37 +804,13 @@ class QMeshViewer(QtWidgets.QFrame):
                     normalModel = self.normalsModel.GetTuple(cellIdsInter[0])
 
 
-                    vecInc = n2l(l2n(self.pos_Light) - l2n(pointRayTarget))
+                    vecInc = n2l(l2n(pointsInter[0] - l2n(cam_pos))) # Vector from cam to intersect
                     # Calculate the reflected ray vector
                     vecRef = calcVecR(vecInc, normalModel)
-                    pointRayReflectedTarget = n2l(l2n(pointsInter[0]) + RayCastLength*l2n(vecRef))
+                    vecRef = vecRef / np.linalg.norm(vecRef)
+                    # recursive call here
 
-                    
-                    # distance_to_light = l2n(self.pos_Light) - l2n(pointRayReflectedTarget)
-                    # print("Distance to light : ", distance_to_light)
-
-                    #TODO :
-                    # pixelColor = 
-
-                #si point d'intersection
-                    # Envoyer un rayon au niveau de chaque source de lumière pour tester si elle est à l'ombre
-                    # Si la surface est réfléchissante, le faisceau réfléchi génère: (récursion)
-                    # Si la surface est transparente, il génère le rayon réfracté: (récursion)
-                    # }
-                    # Dans le cas contraire {}
-                    # Utilisez « NearestObject » et « NearestT » pour calculer la couleur
-                    # Couleur ce pixel avec la couleur résultant
-                    # }
-                    # }
-
-                    if isHit(self.obbTree, self.pos_Light, pointsInter[0]):
-                        # print("A l'ombre")
-                        print("# ombre")
-                    else:
-                        print("# pas ombre")
-                        # print("Pas a l'ombre")
-                        # pixelColor
-                    
+                    pixelColor = self.radianceAtPoint(pointsInter[0], vecRef, 0, max_depth=max_depth)
                 
                 else:
 
@@ -854,12 +822,7 @@ class QMeshViewer(QtWidgets.QFrame):
                 image[i, j] = pixelColor
                     
 
-
-
-
         print("Generating picture...")
-        for i in tqdm(range(1000000)):
-            a = sin(i) * tan(i)
             
         plt.imsave("output.png", image)
         
@@ -868,6 +831,30 @@ class QMeshViewer(QtWidgets.QFrame):
         self.render_window.Render()
 
         print("Done !")
+
+    def radianceAtPoint(self, point, out_ray_dir, depth, max_depth=1):
+        if (depth >= max_depth):
+            if isHit(self.obbTree, self.pos_Light, point):
+                return self.renderer.GetBackground()
+            else:
+                return (1, 1, 1)
+        else:
+            out_ray = n2l(l2n(point) + RayCastLength*l2n(out_ray_dir))
+
+            if isHit(self.obbTree, point, out_ray):
+                pointsInter, cellIdsInter = GetIntersect(self.obbTree,
+                                                            point,
+                                                            out_ray)
+
+                normalModel = self.normalsModel.GetTuple(cellIdsInter[0])
+
+                vecInc = n2l(l2n(pointsInter[0] - l2n(point))) # Vector from point to intersect
+                # Calculate the reflected ray vector
+                vecRef = calcVecR(vecInc, normalModel)
+                vecRef = vecRef / np.linalg.norm(vecRef)
+
+                return 0.5 * self.radianceAtPoint(pointsInter[0], vecRef, depth + 1, max_depth=max_depth)
+        return 0
 
 #endregion
 
