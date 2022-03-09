@@ -1,8 +1,24 @@
+from audioop import lin2alaw
 from vtkmodules.vtkRenderingCore import vtkTexture
 from vtkmodules.vtkIOImage import vtkImageReader2Factory
 from vtkmodules.vtkImagingCore import vtkImageFlip
 import vtk
 from vtkmodules.vtkRenderingAnnotation import vtkAxesActor
+import numpy as np
+
+l2n = lambda l: np.array(l)
+n2l = lambda n: list(n)
+
+def normalize(vector):
+    return vector/np.linalg.norm(vector)
+
+def calcVecR(vecInc, vecNor):
+    vecInc = l2n(vecInc)
+    vecNor = l2n(vecNor)
+    
+    vecRef = vecInc - 2*np.dot(vecInc, vecNor)*vecNor
+    
+    return n2l(vecRef)
 
 def MakeAxesActor():
     axes = vtkAxesActor()
@@ -130,26 +146,29 @@ def clip(l):
 
 # def compute_rtx(scene, cameraP, cameraFocus, lightP, resolution = 256):
     
+    
+    
+    
 # Pour chaque pixel de l'image {
-# Créer un rayon qui, de l'œil, passe par ce pixel
-# Initialiser « NearestT » à « INFINITY » et « NearestObject » à « NULL »
+#     Créer un rayon qui, de l'œil, passe par ce pixel
+#     Initialiser « NearestT » à « INFINITY » et « NearestObject » à « NULL »
 
-# Pour chaque objet de la scène {
-# Si le faisceau frappe cet objet {
-# Si la distance « t » est inférieur à « NearestT » {
-# Set "NearestT" à "t"
-# Set « NearestObject » à cet objet
-# }
-# }
-# }
+#     Pour chaque objet de la scène {
+#         Si le faisceau frappe cet objet {
+#             Si la distance « t » est inférieur à « NearestT » {
+#                 Set "NearestT" à "t"
+#                 Set « NearestObject » à cet objet
+#             }
+#         }
+#     }
 
-# Si "NearestObject" est "NULL" {
-# Couleur ce pixel avec la couleur d'arrière-plan
-# Dans le cas contraire {}
-# Envoyer un rayon au niveau de chaque source de lumière pour tester si elle est à l'ombre
-# Si la surface est réfléchissante, le faisceau réfléchi génère: (récursion)
-# Si la surface est transparente, il génère le rayon réfracté: (récursion)
-# Utilisez « NearestObject » et « NearestT » pour calculer la couleur
-# Couleur ce pixel avec la couleur résultant
-# }
-# }
+#     Si "NearestObject" est "NULL" {
+#           Couleur ce pixel avec la couleur d'arrière-plan
+#      Dans le cas contraire {}
+#           Envoyer un rayon au niveau de chaque source de lumière pour tester si elle est à l'ombre
+#           Si la surface est réfléchissante, le faisceau réfléchi génère: (récursion)
+#           Si la surface est transparente, il génère le rayon réfracté: (récursion)
+#           Utilisez « NearestObject » et « NearestT » pour calculer la couleur
+#           Couleur ce pixel avec la couleur résultant
+#       }
+#   }

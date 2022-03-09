@@ -36,16 +36,7 @@ intersect_radius = 2.5
 
 camera_focus = [0,0,0]
 
-l2n = lambda l: np.array(l)
-n2l = lambda n: list(n)
 
-def calcVecR(vecInc, vecNor):
-    vecInc = l2n(vecInc)
-    vecNor = l2n(vecNor)
-    
-    vecRef = vecInc - 2*np.dot(vecInc, vecNor)*vecNor
-    
-    return n2l(vecRef)
 
 #region Superclass and UI setup
 class ViewersApp(QtWidgets.QMainWindow):
@@ -112,12 +103,11 @@ class QMeshViewer(QtWidgets.QFrame):
         self.interactor.SetRenderWindow(self.render_window)
         self.renderer.SetBackground(colors.GetColor3d("DarkGreen"))
 
-
         self.renderer.GetActiveCamera().SetPosition(0,0,500)
+
+
         #################################
         ## POWERPLANT
-        # powerplant_reader, powerplant_actor = modelFromFile(model)  
-        # #the next lines do exactly what is in modelFromFile function but if we don't do this we cannot access stuff
         #################################
         powerplant_reader = readfile(model, 'obj')
         pp_mapper = vtkPolyDataMapper()
@@ -143,21 +133,28 @@ class QMeshViewer(QtWidgets.QFrame):
         # self.light.SetConeAngle(90)
         self.light.SetPositional(True)
         self.renderer.AddLight(self.light)
-        self.followTarget = False #if the camera focal point is on 0,0,0 or on the target
-
-        #To display the cone of the light
-        # light_actor = vtk.vtkLightActor()
-        # light_actor.SetLight(self.light)
-        # light_actor.AddViewPropr()
+        
+        #if the camera focal point is on 0,0,0 or on the target :
+        self.followTarget = False 
 
         #################################
-        ## sun_ball BALL TO SHOW WHERE IS LIGHT
+        #################################
+        #Camera (source) settings, not the actual vtk camera
+        #################################
+        #################################
+        self.pos_Camera = [100.0, 10.0, 30.0]
+        _, self.cam_ball = addPoint(self.renderer, self.pos_Camera, color=[0.0, 1.0, 0.0])
+        self.line_actor, self.line = addLine(self.renderer, camera_focus, self.pos_Camera, color=[1.,0.,0.])
+        self.renderer.AddActor(self.line_actor) #this doesn't work with shadows
+
+
+        #################################
+        ## sun_ball BALL TO LIVE-raytrace
         #################################
         self.sun_actor, self.sun_ball = addPoint(self.renderer, self.pos_Light, color=sun_color)
         self.sun_ball.SetPhiResolution(sun_resolution)
         self.sun_ball.SetThetaResolution(sun_resolution)
         self.sun_ball.SetStartPhi(90) #to cut half a sphere
-        # print(self.sun_ball.GetSt)
         self.sun_actor.GetProperty().EdgeVisibilityOn()  # show edges/wireframe
         self.sun_actor.GetProperty().SetEdgeColor([0.,0.,0.])  
         self.sunOffset = 0.0
@@ -182,8 +179,7 @@ class QMeshViewer(QtWidgets.QFrame):
         normalsCalcSun.AutoOrientNormalsOn()
         # Perform calculation
         normalsCalcSun.Update()
-        
-        
+
         # Create a 'dummy' 'vtkCellCenters' to force the glyphs to the cell-centers
         dummy_cellCenterCalcSun = vtk.vtkCellCenters()
         dummy_cellCenterCalcSun.VertexCellsOn()
@@ -291,8 +287,11 @@ class QMeshViewer(QtWidgets.QFrame):
                 normalModel =  self.normalsModel.GetTuple(cellIdsInter[0])
                 # Insert the coordinates of the intersection point in the dummy container
                 self.dummy_points.InsertNextPoint(pointsInter[0])
+                
+                directionRay = normalize(n2l(l2n(self.pos_Camera) - l2n(pointsInter[0])))
+                
                 # Insert the normal vector of the intersection cell in the dummy container
-                self.dummy_vectors.InsertNextTuple(normalModel)
+                self.dummy_vectors.InsertNextTuple(directionRay)
 
                 ac, line = addLine(self.renderer, pointSun, pointsInter[0], color=sun_ray_color)
                 # Render intersection points
@@ -334,16 +333,6 @@ class QMeshViewer(QtWidgets.QFrame):
 
 
         #################################
-        #################################
-        #Camera (source) settings, not the actual vtk camera
-        #################################
-        #################################
-        self.pos_Camera = [100.0, 10.0, 30.0]
-        _, self.cam_ball = addPoint(self.renderer, self.pos_Camera, color=[0.0, 1.0, 0.0])
-        self.line_actor, self.line = addLine(self.renderer, camera_focus, self.pos_Camera, color=[1.,0.,0.])
-        self.renderer.AddActor(self.line_actor) #this doesn't work with shadows
-
-        #################################
         #PLANE (screen simulation)
         #################################
         x,y,z,normal = self.compute_plane_pos()
@@ -359,8 +348,8 @@ class QMeshViewer(QtWidgets.QFrame):
         plane_source.SetOrigin(p[0])
         plane_source.SetPoint1(p[1])
         plane_source.SetPoint2(p[2])
-        # plane_source.SetNormal(normal)
-        plane_source.SetResolution(10, 20)
+        plane_source.SetNormal(normal)
+        plane_source.SetResolution(4, 8)
         # plane_source.SetRepresentation(1)
         plane_source.Update()
 
@@ -414,7 +403,6 @@ class QMeshViewer(QtWidgets.QFrame):
     #intersections, moving cell centers, changing focal point of light
     def update_components(self):
         pointsVTKintersection = vtk.vtkPoints()
-        # code = self.obbTree.IntersectWithLine(self.pos_Light, self.pos_Camera, pointsVTKintersection, None) #None for CellID but we will need this info later
         code = self.obbTree.IntersectWithLine(camera_focus, self.pos_Camera, pointsVTKintersection, None) #None for CellID but we will need this info later
 
         pointsVTKIntersectionData = pointsVTKintersection.GetData()
@@ -443,15 +431,10 @@ class QMeshViewer(QtWidgets.QFrame):
 
         #if the light's focal point is following the camera position
         if self.followTarget : self.light.SetFocalPoint(self.pos_Camera)
-        
-        
+
         self.dummy_points.Reset()
         self.dummy_vectors.Reset()
-        
-        # dummy_points = vtk.vtkPoints()
-        # dummy_vectors
-        
-        
+
         #Move the sun's center cell as well
         #Move the ray casting lines
         self.cellCenterCalcSun.Update()
@@ -489,8 +472,8 @@ class QMeshViewer(QtWidgets.QFrame):
                     self.dummy_points.InsertNextPoint(pointsInter[0])
                     line.SetPoint2(pointsInter[0])
                 
-                #TODO : calculer en 3D la normale en direction de la pos caméra
-                self.dummy_vectors.InsertNextTuple(n2l(l2n(self.pos_Camera)-l2n(pos)))
+                #normale en direction de la pos caméra
+                self.dummy_vectors.InsertNextTuple(n2l(l2n(self.pos_Camera)-l2n(pointsInter[0])))
                 
                 
             else:
@@ -526,39 +509,23 @@ class QMeshViewer(QtWidgets.QFrame):
         self.screen_plane[1].SetOrigin(p[0])
         self.screen_plane[1].SetPoint1(p[1])
         self.screen_plane[1].SetPoint2(p[2])
-        # self.screen_plane[1].SetNormal(normal)
+        self.screen_plane[1].SetNormal(normal)
 
         #END update_components
         ######################
 
     def previewShadows(self, new_value):
         if new_value :
-            # #we remove the line actor so we can display shadows
-            self.renderer.RemoveActor(self.line_actor)
-            
-            for ((acLine, _), (acPoint, _)) in zip(self.lines_hit, self.points_hit):
-                self.renderer.RemoveActor(acLine)
-                self.renderer.RemoveActor(acPoint)
-
-            self.renderer.RemoveActor(self.glyphActorModel)
-            self.renderer.RemoveActor(self.glyphActorSun)
-            # self.renderer.RemoveActor()
+            self.setActorsForRendering(False)
             # #we add an offset to the light pos or else we have
             # #the shadows of the sun's normals (arrows on the sphere)
             self.sunOffset = 10 
-
             self.renderer.UseShadowsOn()
 
         else :
+            self.setActorsForRendering(True)
             self.renderer.UseShadowsOff()
-            self.renderer.AddActor(self.line_actor)
-            self.sunOffset = 0.0
-            for ((acLine, _), (acPoint, _)) in zip(self.lines_hit, self.points_hit):
-                self.renderer.AddActor(acLine)
-                self.renderer.AddActor(acPoint)
 
-            self.renderer.AddActor(self.glyphActorModel)
-            self.renderer.AddActor(self.glyphActorSun)
 
         x = self.light.GetPosition()[0]
         y = self.light.GetPosition()[1]
@@ -569,6 +536,34 @@ class QMeshViewer(QtWidgets.QFrame):
         #Rechange the position with the right offset
         self.sun_ball.SetCenter(x, y, z+self.sunOffset)
         self.render_window.Render()
+        
+        
+    def setActorsForRendering(self, add):
+        if not add :
+            self.renderer.RemoveActor(self.sun_actor)
+            self.renderer.RemoveActor(self.glyphActorSun)
+            # self.renderer.RemoveActor(self.cam_ball)
+            self.renderer.RemoveActor(self.line_actor)
+            
+            for ((acLine, _), (acPoint, _)) in zip(self.lines_hit, self.points_hit):
+                self.renderer.RemoveActor(acLine)
+                self.renderer.RemoveActor(acPoint)
+
+            self.renderer.RemoveActor(self.glyphActorModel)
+            self.renderer.RemoveActor(self.glyphActorSun)
+        else:
+            self.renderer.AddActor(self.line_actor)
+            self.sunOffset = 0.0
+            for ((acLine, _), (acPoint, _)) in zip(self.lines_hit, self.points_hit):
+                self.renderer.AddActor(acLine)
+                self.renderer.AddActor(acPoint)
+
+            self.renderer.AddActor(self.glyphActorModel)
+            self.renderer.AddActor(self.glyphActorSun)
+            # self.renderer.RemoveActor(self.cam_ball)
+            self.renderer.AddActor(self.sun_actor)
+            self.renderer.AddActor(self.glyphActorSun)
+        
 #endregion
 
 #region Light
@@ -807,6 +802,7 @@ class QMeshViewer(QtWidgets.QFrame):
                                                              cam_pos,
                                                              pointRayTarget)
                     # TODO : Garder le plus proche des points d'intersect
+                    # ANSWER TODO : C'est le pointsInter[0] justement
 
                     normalModel = self.normalsModel.GetTuple(cellIdsInter[0])
 
@@ -936,29 +932,3 @@ if __name__ == "__main__":
     main_window.show()
     main_window.initialize()
     app.exec_()
-    
-    
-    
-# Pour chaque pixel de l'image {
-#     Créer un rayon qui, de l'œil, passe par ce pixel
-#     Initialiser « NearestT » à « INFINITY » et « NearestObject » à « NULL »
-
-#     Pour chaque objet de la scène {
-#         Si le faisceau frappe cet objet {
-#             Si la distance « t » est inférieur à « NearestT » {
-#                 Set "NearestT" à "t"
-#                 Set « NearestObject » à cet objet
-#             }
-#         }
-#     }
-
-#     Si "NearestObject" est "NULL" {
-#           Couleur ce pixel avec la couleur d'arrière-plan
-#      Dans le cas contraire {}
-#           Envoyer un rayon au niveau de chaque source de lumière pour tester si elle est à l'ombre
-#           Si la surface est réfléchissante, le faisceau réfléchi génère: (récursion)
-#           Si la surface est transparente, il génère le rayon réfracté: (récursion)
-#           Utilisez « NearestObject » et « NearestT » pour calculer la couleur
-#           Couleur ce pixel avec la couleur résultant
-#       }
-#   }
