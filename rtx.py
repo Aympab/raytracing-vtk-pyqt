@@ -85,6 +85,7 @@ class ViewersApp(QtWidgets.QMainWindow):
         self.ui.button_RTX.clicked.connect(self.vtk_widget.compute_RTX)
         self.ui.width.valueChanged.connect(self.vtk_widget.change_width)
         self.ui.height.valueChanged.connect(self.vtk_widget.change_height)
+        self.ui.spinBox_maxDepth.valueChanged.connect(self.vtk_widget.change_maxDepth)
         
     def initialize(self):
         self.vtk_widget.start()
@@ -373,11 +374,12 @@ class QMeshViewer(QtWidgets.QFrame):
         self.renderer.AddActor(plane_actor)
         self.screen_plane = (plane_actor, plane_source)
 
-        print("Number of lines : ", len(self.lines_hit))
+        print(f"Sun resolution : {sun_resolution}\nNumber of rays from the sun : {len(self.lines_hit)}")
         self.render_window.Render()
         self.intersect_list = []
         self.pic_width = 4
         self.pic_height = 2
+        self.maxDepth = 3
 
 #region methods
 ################################################################################
@@ -727,8 +729,11 @@ class QMeshViewer(QtWidgets.QFrame):
     def change_height(self, new_value):
         self.pic_height = new_value
 
-    def compute_RTX(self, max_depth=2): # TODO : max_depth takes the value of the button
-        max_depth = 2
+    def change_maxDepth(self, new_value):
+        self.maxDepth = new_value
+
+    def compute_RTX(self):
+        max_depth = self.maxDepth
         #remove sphere to avoid ray castings on it
         self.renderer.RemoveActor(self.sun_actor)
         self.renderer.RemoveActor(self.glyphActorSun)
