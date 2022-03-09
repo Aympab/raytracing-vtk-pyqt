@@ -737,6 +737,7 @@ class QMeshViewer(QtWidgets.QFrame):
         #remove sphere to avoid ray castings on it
         self.renderer.RemoveActor(self.sun_actor)
         self.renderer.RemoveActor(self.glyphActorSun)
+        # self.renderer.RemoveActor(self.cam_ball)
         self.render_window.Render()
         
         cam = self.renderer.GetActiveCamera()
@@ -777,7 +778,7 @@ class QMeshViewer(QtWidgets.QFrame):
         cam_pos = np.array([0,0,2,1])#.reshape(-1,1)
         cam_pos = tr_mat@cam_pos
         cam_pos = (cam_pos[0], cam_pos[1], cam_pos[2])
-
+        # self.pos_Camera = cam_pos
 
         #     # Pour chaque pixel de l'image {
         tabx = np.linspace(screen[0], screen[2], num=width+1)
@@ -816,7 +817,7 @@ class QMeshViewer(QtWidgets.QFrame):
                     vecRef = vecRef / np.linalg.norm(vecRef)
                     # recursive call here
 
-                    pixelColor = self.radianceAtPoint(pointsInter[0], vecRef, 0, max_depth=max_depth)
+                    pixelColor = clip(n2l(self.radianceAtPoint(pointsInter[0], vecRef, 0, cam_pos, max_depth=max_depth)))
                 
                 else:
 
@@ -838,23 +839,30 @@ class QMeshViewer(QtWidgets.QFrame):
 
         print("Done !")
 
-    def radianceAtPoint(self, point, out_ray_dir, depth, max_depth=1, n_reflects=1):
+    def radianceAtPoint(self, point, out_ray_dir, depth, cam_pos, max_depth=1, n_reflects=1):
+        #Si on a atteint la profondeur max, on utilise la contribution directe
+        # de la lumière
         if (depth >= max_depth):
             if isHit(self.obbTree, self.pos_Light, point):
-                return (1, 1, 1)
+                return l2n((0, 0, 0))
             else:
-                return (0, 0, 0)
+                return l2n((1,1,1))
+                # return self.light.GetDiffuseColor() #TODO : Get dynamic light color
+                
         else:
-            out_ray = n2l(l2n(point) + RayCastLength*l2n(out_ray_dir))
+            out_ray_point = n2l(l2n(point) + RayCastLength*l2n(out_ray_dir))
 
-            if isHit(self.obbTree, point, out_ray):
+            if isHit(self.obbTree, point, out_ray_point):
                 pointsInter, cellIdsInter = GetIntersect(self.obbTree,
                                                             point,
-                                                            out_ray)
+                                                            out_ray_point)
 
                 normalModel = self.normalsModel.GetTuple(cellIdsInter[0])
 
                 vecInc = n2l(l2n(pointsInter[0] - l2n(point))) # Vector from point to intersect
+                
+                intersection_to_light = l2n(self.pos_Light) - l2n(pointsInter[0])
+                intersection_to_light /= np.linalg.norm(intersection_to_light)
 
                 # Calculate the reflected ray vector
                 vecRef = calcVecR(vecInc, normalModel)
@@ -862,21 +870,59 @@ class QMeshViewer(QtWidgets.QFrame):
                 if norm > 0:
                     vecRef = vecRef / norm
                 else: # Problem if this happens
-                    return (0, 0, 0)
+                    return l2n((0, 0, 0))
 
+                ambientMat = l2n(self.powerplant_actor.GetProperty().GetAmbientColor())
+                specularMat = l2n(self.powerplant_actor.GetProperty().GetSpecularColor())
+                diffuseMat = l2n(self.powerplant_actor.GetProperty().GetDiffuseColor())
 
+                ambientLight = l2n(self.light.GetAmbientColor())
+                specularLight = l2n(self.light.GetSpecularColor())
+                diffuseLight = l2n(self.light.GetDiffuseColor())
+
+                
+                illumination = np.zeros((3))
+
+                # ambiant
+                illumination += ambientMat * ambientLight
+
+                # diffuse
+                illumination += diffuseMat * diffuseLight * np.dot(intersection_to_light, normalModel)
+
+                # specular
+                intersection_to_camera = cam_pos - l2n(pointsInter[0])
+                intersection_to_camera /= np.linalg.norm(intersection_to_camera)
+                
+                H = intersection_to_light + intersection_to_camera
+                H /= np.linalg.norm(H)
+                
+                # illumination += nearest_object['specular'] * specularLight * np.dot(l2n(normalModel), H) ** (nearest_object['shininess'] / 4)
+                illumination += specularMat * specularLight * np.dot(l2n(normalModel), H) ** (100 / 4)
+
+                reflection = 1
+                # reflection
+                color = reflection * illumination
+                #reflection *= nearest_object['reflection']
+                
+                if isHit(self.obbTree, self.pos_Light, pointsInter[0]):
+                    color += ambientMat
+
+                return color + self.radianceAtPoint(pointsInter[0], vecRef, depth + 1, cam_pos, max_depth=max_depth)
+                return color + self.radianceAtPoint(pointsInter[0], vecRef, depth + 1, cam_pos, max_depth=max_depth)
                 # TODO : Here, find the material and lambert part + how to sample rays
-                terms = []
-                for n in range(2):
-                    incoming_light_ray = l2n(self.radianceAtPoint(pointsInter[0], vecRef, depth + 1, max_depth=max_depth))
-                    lambert = 1 # Easy to compute 
-                    material = 1 # Hard to find in vtk
-                    terms.append(incoming_light_ray * material * lambert)
-                incoming_light = np.mean(np.asarray(terms), axis=0)
-                return n2l(incoming_light * material * lambert)
+                # terms = []
+                # for n in range(n_reflects):
+                
+                incoming_light_ray = l2n(self.radianceAtPoint(pointsInter[0], vecRef, depth + 1, max_depth=max_depth))
+                # lambert = 1 # Easy to compute 
+                # material = 1 # Hard to find in vtk
+                # terms.append(incoming_light_ray * material * lambert)
+                
+                # incoming_light = np.mean(np.asarray(terms), axis=0)
+                # return n2l(incoming_light * material * lambert)
 
-            else: # TODO : Find what to put here
-                return (0, 0, 0)
+            else: # Reflext background color, here black so no background color
+                return l2n((0, 0, 0))
         return 0
 
 #endregion

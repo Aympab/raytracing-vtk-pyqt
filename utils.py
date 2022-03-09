@@ -120,6 +120,14 @@ def GetIntersect(obbTree, pSource, pTarget):
     
     return pointsInter, cellIdsInter
 
+def clip(l):
+    for i, e in enumerate(l) :
+        l[i] = min(1, max(0,e))
+    return l
+
+# def BRDF(matSpecular, matAmbient, matDiffuse):
+    
+
 # def compute_rtx(scene, cameraP, cameraFocus, lightP, resolution = 256):
     
 # Pour chaque pixel de l'image {
