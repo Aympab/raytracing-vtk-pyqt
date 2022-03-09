@@ -727,7 +727,8 @@ class QMeshViewer(QtWidgets.QFrame):
     def change_height(self, new_value):
         self.pic_height = new_value
 
-    def compute_RTX(self, max_depth=2):
+    def compute_RTX(self, max_depth=2): # TODO : max_depth takes the value of the button
+        max_depth = 2
         #remove sphere to avoid ray castings on it
         self.renderer.RemoveActor(self.sun_actor)
         self.renderer.RemoveActor(self.glyphActorSun)
@@ -747,7 +748,7 @@ class QMeshViewer(QtWidgets.QFrame):
         
         image = np.zeros((height, width, 3))
 
-        print(f"Computing raytracing of {height} * {width} image")
+        print(f"Computing raytracing of {height} * {width} image and max depth {max_depth}")
 
         #Get the transform 
         inv = vtk.vtkMatrix4x4()
@@ -768,7 +769,7 @@ class QMeshViewer(QtWidgets.QFrame):
         left = tr_mat@left
         right = tr_mat@right
         
-        cam_pos = np.array([0,0,1,1])#.reshape(-1,1)
+        cam_pos = np.array([0,0,2,1])#.reshape(-1,1)
         cam_pos = tr_mat@cam_pos
         cam_pos = (cam_pos[0], cam_pos[1], cam_pos[2])
 
@@ -832,12 +833,12 @@ class QMeshViewer(QtWidgets.QFrame):
 
         print("Done !")
 
-    def radianceAtPoint(self, point, out_ray_dir, depth, max_depth=1):
+    def radianceAtPoint(self, point, out_ray_dir, depth, max_depth=1, n_reflects=1):
         if (depth >= max_depth):
             if isHit(self.obbTree, self.pos_Light, point):
-                return self.renderer.GetBackground()
-            else:
                 return (1, 1, 1)
+            else:
+                return (0, 0, 0)
         else:
             out_ray = n2l(l2n(point) + RayCastLength*l2n(out_ray_dir))
 
@@ -849,11 +850,28 @@ class QMeshViewer(QtWidgets.QFrame):
                 normalModel = self.normalsModel.GetTuple(cellIdsInter[0])
 
                 vecInc = n2l(l2n(pointsInter[0] - l2n(point))) # Vector from point to intersect
+
                 # Calculate the reflected ray vector
                 vecRef = calcVecR(vecInc, normalModel)
-                vecRef = vecRef / np.linalg.norm(vecRef)
+                norm = np.linalg.norm(vecRef)
+                if norm > 0:
+                    vecRef = vecRef / norm
+                else: # Problem if this happens
+                    return (0, 0, 0)
 
-                return 0.5 * self.radianceAtPoint(pointsInter[0], vecRef, depth + 1, max_depth=max_depth)
+
+                # TODO : Here, find the material and lambert part + how to sample rays
+                terms = []
+                for n in range(2):
+                    incoming_light_ray = l2n(self.radianceAtPoint(pointsInter[0], vecRef, depth + 1, max_depth=max_depth))
+                    lambert = 1 # Easy to compute 
+                    material = 1 # Hard to find in vtk
+                    terms.append(incoming_light_ray * material * lambert)
+                incoming_light = np.mean(np.asarray(terms), axis=0)
+                return n2l(incoming_light * material * lambert)
+
+            else: # TODO : Find what to put here
+                return (0, 0, 0)
         return 0
 
 #endregion
