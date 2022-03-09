@@ -14,3 +14,9 @@ class Material :
         self.shininess = shininess
         
         # self.is
+        
+class CellInfo() :
+    def __init__(self, color=[0.,0.,1.], normal=[1.,1.,0.], isShiny=True) :
+        self.color = color
+        self.normal = normal
+        self.isShiny = isShiny

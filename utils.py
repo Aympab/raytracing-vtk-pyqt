@@ -148,7 +148,6 @@ def clip(l):
     
     
     
-    
 # Pour chaque pixel de l'image {
 #     Créer un rayon qui, de l'œil, passe par ce pixel
 #     Initialiser « NearestT » à « INFINITY » et « NearestObject » à « NULL »

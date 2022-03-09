@@ -843,8 +843,8 @@ class QMeshViewer(QtWidgets.QFrame):
             if isHit(self.obbTree, self.pos_Light, point):
                 return l2n((0, 0, 0))
             else:
-                return l2n((1,1,1))
                 # return self.light.GetDiffuseColor() #TODO : Get dynamic light color
+                return l2n((1,1,1))
                 
         else:
             ray_dir = calcVecR(ray_origin, N)
@@ -892,7 +892,7 @@ class QMeshViewer(QtWidgets.QFrame):
                 
                 illumination += specularMat * specularLight * np.dot(l2n(N), H) ** (100 / 4)
 
-                reflection = 0.5
+                reflection = 0.8
 
                 return illumination + reflection * self.radianceAtPoint(point, pointsInter[0], nextN, depth + 1, max_depth=max_depth)
                 return color + self.radianceAtPoint(pointsInter[0], vecRef, depth + 1, cam_pos, max_depth=max_depth)
