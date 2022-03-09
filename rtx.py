@@ -810,14 +810,15 @@ class QMeshViewer(QtWidgets.QFrame):
 
                     normalModel = self.normalsModel.GetTuple(cellIdsInter[0])
 
+                    vecInc = l2n(pointsInter[0] - l2n(cam_pos)) # Vector from cam to intersect
+                    vecInc = n2l(vecInc / np.linalg.norm(vecInc))
 
-                    vecInc = n2l(l2n(pointsInter[0] - l2n(cam_pos))) # Vector from cam to intersect
                     # Calculate the reflected ray vector
-                    vecRef = calcVecR(vecInc, normalModel)
-                    vecRef = vecRef / np.linalg.norm(vecRef)
+                    #vecRef = calcVecR(vecInc, normalModel)
+                    #vecRef = vecRef / np.linalg.norm(vecRef)
                     # recursive call here
 
-                    pixelColor = clip(n2l(self.radianceAtPoint(pointsInter[0], vecRef, 0, cam_pos, max_depth=max_depth)))
+                    pixelColor = clip(n2l(self.radianceAtPoint(vecInc, pointsInter[0], normalModel, 0, max_depth=max_depth)))
                 
                 else:
 
@@ -839,7 +840,7 @@ class QMeshViewer(QtWidgets.QFrame):
 
         print("Done !")
 
-    def radianceAtPoint(self, point, out_ray_dir, depth, cam_pos, max_depth=1, n_reflects=1):
+    def radianceAtPoint(self, ray_origin, point, N, depth, max_depth=1, n_reflects=1):
         #Si on a atteint la profondeur max, on utilise la contribution directe
         # de la lumière
         if (depth >= max_depth):
@@ -850,27 +851,26 @@ class QMeshViewer(QtWidgets.QFrame):
                 # return self.light.GetDiffuseColor() #TODO : Get dynamic light color
                 
         else:
-            out_ray_point = n2l(l2n(point) + RayCastLength*l2n(out_ray_dir))
+            ray_dir = calcVecR(ray_origin, N)
+            out_ray_point = n2l(l2n(point) + RayCastLength*l2n(ray_dir))
+            point = n2l(l2n(N) * 1e-5 + l2n(point)) # To avoid hitting itself
 
             if isHit(self.obbTree, point, out_ray_point):
                 pointsInter, cellIdsInter = GetIntersect(self.obbTree,
                                                             point,
                                                             out_ray_point)
 
-                normalModel = self.normalsModel.GetTuple(cellIdsInter[0])
-
-                vecInc = n2l(l2n(pointsInter[0] - l2n(point))) # Vector from point to intersect
+                nextN = self.normalsModel.GetTuple(cellIdsInter[0])
                 
                 intersection_to_light = l2n(self.pos_Light) - l2n(pointsInter[0])
                 intersection_to_light /= np.linalg.norm(intersection_to_light)
 
+                if isHit(self.obbTree, self.pos_Light, point):
+                    direct_illumination = l2n((1, 1, 1)) # Change later
+                else:
+                    direct_illumination = l2n((0, 0, 0))
+
                 # Calculate the reflected ray vector
-                vecRef = calcVecR(vecInc, normalModel)
-                norm = np.linalg.norm(vecRef)
-                if norm > 0:
-                    vecRef = vecRef / norm
-                else: # Problem if this happens
-                    return l2n((0, 0, 0))
 
                 ambientMat = l2n(self.powerplant_actor.GetProperty().GetAmbientColor())
                 specularMat = l2n(self.powerplant_actor.GetProperty().GetSpecularColor())
@@ -880,34 +880,25 @@ class QMeshViewer(QtWidgets.QFrame):
                 specularLight = l2n(self.light.GetSpecularColor())
                 diffuseLight = l2n(self.light.GetDiffuseColor())
 
-                
-                illumination = np.zeros((3))
-
+                # Initialize color
                 # ambiant
-                illumination += ambientMat * ambientLight
+                illumination = ambientMat * ambientLight
 
                 # diffuse
-                illumination += diffuseMat * diffuseLight * np.dot(intersection_to_light, normalModel)
+                illumination += diffuseMat * diffuseLight * np.dot(intersection_to_light, N) * direct_illumination
 
                 # specular
-                intersection_to_camera = cam_pos - l2n(pointsInter[0])
-                intersection_to_camera /= np.linalg.norm(intersection_to_camera)
+                intersection_to_origin = ray_origin - l2n(pointsInter[0])
+                intersection_to_origin /= np.linalg.norm(intersection_to_origin)
                 
-                H = intersection_to_light + intersection_to_camera
-                H /= np.linalg.norm(H)
+                H = intersection_to_light + intersection_to_origin
+                H /= np.clip(np.linalg.norm(H), 0, 1)
                 
-                # illumination += nearest_object['specular'] * specularLight * np.dot(l2n(normalModel), H) ** (nearest_object['shininess'] / 4)
-                illumination += specularMat * specularLight * np.dot(l2n(normalModel), H) ** (100 / 4)
+                illumination += specularMat * specularLight * np.dot(l2n(N), H) ** (100 / 4)
 
-                reflection = 1
-                # reflection
-                color = reflection * illumination
-                #reflection *= nearest_object['reflection']
-                
-                if isHit(self.obbTree, self.pos_Light, pointsInter[0]):
-                    color += ambientMat
+                reflection = 0.5
 
-                return color + self.radianceAtPoint(pointsInter[0], vecRef, depth + 1, cam_pos, max_depth=max_depth)
+                return illumination + reflection * self.radianceAtPoint(point, pointsInter[0], nextN, depth + 1, max_depth=max_depth)
                 return color + self.radianceAtPoint(pointsInter[0], vecRef, depth + 1, cam_pos, max_depth=max_depth)
                 # TODO : Here, find the material and lambert part + how to sample rays
                 # terms = []
