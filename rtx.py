@@ -233,11 +233,14 @@ class QMeshViewer(QtWidgets.QFrame):
             self.cellCenterSun.append(point)
 
         #For the intersections
-        self.obbTree = vtk.vtkOBBTree()
-        self.obbTree.SetDataSet(powerplant_reader.GetOutput())
-        self.obbTree.BuildLocator()
+        self.obbTrees = []
+        obbTree = vtk.vtkOBBTree()
+        obbTree.SetDataSet(powerplant_reader.GetOutput())
+        obbTree.BuildLocator()
+        self.obbTrees.append(obbTree)
 
-
+        self.actorsOfTree = []
+        self.actorsOfTree.append(self.powerplant_actor)
 
         #################################
         #LIVE RTX COMPUTING
@@ -283,9 +286,9 @@ class QMeshViewer(QtWidgets.QFrame):
             pointRayTarget = n2l(l2n(pointSun) + RayCastLength*l2n(normalSun))
             
             # Check if there are any intersections for the given ray
-            if isHit(self.obbTree, pointSun, pointRayTarget):
+            if anyHit(self.obbTrees, pointSun, pointRayTarget):
                 # Retrieve coordinates of intersection points and intersected cell ids
-                pointsInter, cellIdsInter = GetIntersect(self.obbTree, pointSun, pointRayTarget)
+                pointsInter, cellIdsInter, idx_tree = closestIntersect(self.obbTrees, pointSun, pointRayTarget)
 
                 # Get the normal vector at the earth cell that intersected with the ray
                 normalModel =  self.normalsModel.GetTuple(cellIdsInter[0])
@@ -405,7 +408,7 @@ class QMeshViewer(QtWidgets.QFrame):
         self.render_window.Render()
 
     #intersections, moving cell centers, changing focal point of light
-    def update_components(self):
+    """def update_components(self):
         pointsVTKintersection = vtk.vtkPoints()
         code = self.obbTree.IntersectWithLine(camera_focus, self.pos_Camera, pointsVTKintersection, None) #None for CellID but we will need this info later
 
@@ -460,12 +463,12 @@ class QMeshViewer(QtWidgets.QFrame):
             pointRayTarget = n2l(l2n(pointSun) + RayCastLength*l2n(normalSun))
 
             
-            if isHit(self.obbTree, line.GetPoint1(), pointRayTarget):
+            if anyHit(self.obbTrees, line.GetPoint1(), pointRayTarget):
                 
                 #Change color
                 ac.GetProperty().SetOpacity(1)
                 
-                pointsInter, cellIdsInter = GetIntersect(self.obbTree, pointSun, pointRayTarget)
+                pointsInter, cellIdsInter = closestIntersect(self.obbTrees, pointSun, pointRayTarget)
                 ac_pointHit.GetProperty().SetColor(intersect_color)
                 
                 normalModel = self.normalsModel.GetTuple(idx)
@@ -516,7 +519,7 @@ class QMeshViewer(QtWidgets.QFrame):
         self.screen_plane[1].SetNormal(normal)
 
         #END update_components
-        ######################
+        ######################"""
 
     def previewShadows(self, new_value):
         if new_value :
@@ -798,15 +801,13 @@ class QMeshViewer(QtWidgets.QFrame):
                 
                 pixelColor = (0,0,0)
                 
-                
-                
                 # Créer un rayon qui, de l'oeil, passe par ce pixel
                 pointRayTarget = n2l(l2n(cam_pos) + RayCastLength*direction)
 
-                if isHit(self.obbTree, cam_pos, pointRayTarget):
-                    pointsInter, cellIdsInter = GetIntersect(self.obbTree,
-                                                             cam_pos,
-                                                             pointRayTarget)
+                if anyHit(self.obbTrees, cam_pos, pointRayTarget):
+                    pointsInter, cellIdsInter, idx_tree = closestIntersect(self.obbTrees,
+                                                            cam_pos,
+                                                            pointRayTarget)
                     # TODO : Garder le plus proche des points d'intersect
                     # ANSWER TODO : C'est le pointsInter[0]; pointsInter étant la liste de tous les points d'intersections, le [0] c'est le premier
 
@@ -846,21 +847,22 @@ class QMeshViewer(QtWidgets.QFrame):
         #Si on a atteint la profondeur max, on utilise la contribution directe
         # de la lumière
         if (depth >= max_depth):
-            if isHit(self.obbTree, self.pos_Light, point):
-                return l2n((0, 0, 0))
+            if anyHit(self.obbTrees, self.pos_Light, point):
+                return np.array([0, 0, 0])
             else:
                 # return self.light.GetDiffuseColor() #TODO : Get dynamic light color
-                return l2n((1,1,1))
+                return np.array([1, 1, 1])
                 
         else:
             ray_dir = calcVecR(ray_origin, N)
             out_ray_point = n2l(l2n(point) + RayCastLength*l2n(ray_dir))
             point = n2l(l2n(N) * 1e-5 + l2n(point)) # To avoid hitting itself
 
-            if isHit(self.obbTree, point, out_ray_point):
-                pointsInter, cellIdsInter = GetIntersect(self.obbTree,
+            if anyHit(self.obbTrees, point, out_ray_point):
+                pointsInter, cellIdsInter, idx_tree = closestIntersect(self.obbTrees,
                                                             point,
                                                             out_ray_point)
+                actor = self.actorsOfTree[idx_tree]
 
                 nextN = self.normalsModel.GetTuple(cellIdsInter[0])
                 
@@ -869,8 +871,8 @@ class QMeshViewer(QtWidgets.QFrame):
 
                 intensity = self.light.GetIntensity()
 
-                if isHit(self.obbTree, self.pos_Light, point):
-                    direct_illumination = l2n((1, 1, 1))*intensity # Change later
+                if anyHit(self.obbTrees, self.pos_Light, point):
+                    direct_illumination = l2n((1, 1, 1))*intensity
                 else:
                     direct_illumination = l2n((0, 0, 0))
 
@@ -882,12 +884,12 @@ class QMeshViewer(QtWidgets.QFrame):
 
                 #TODO : il faut set les specular et diffuse color du material au début
                 #Ou juste utiliser color ?
-                # ambientMat = l2n(self.powerplant_actor.GetProperty().GetAmbientColor())
-                ambientMat = l2n(self.powerplant_actor.GetProperty().GetColor())
-                # specularMat = l2n(self.powerplant_actor.GetProperty().GetSpecularColor())
-                specularMat = l2n(self.powerplant_actor.GetProperty().GetColor())
-                # diffuseMat = l2n(self.powerplant_actor.GetProperty().GetDiffuseColor())
-                diffuseMat = l2n(self.powerplant_actor.GetProperty().GetColor())
+                # ambientMat = l2n(actor.GetProperty().GetAmbientColor())
+                ambientMat = l2n(actor.GetProperty().GetColor())
+                # specularMat = l2n(actor.GetProperty().GetSpecularColor())
+                specularMat = l2n(actor.GetProperty().GetColor())
+                # diffuseMat = l2n(actor.GetProperty().GetDiffuseColor())
+                diffuseMat = l2n(actor.GetProperty().GetColor())
 
 
                 ambientLight = l2n(self.light.GetAmbientColor()) * intensity

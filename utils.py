@@ -99,12 +99,41 @@ def read_cubemap(folder_root, file_names):
     texture.InterpolateOn()
     return texture
 
+
+def anyHit(obbTrees, pSource, pTarget):
+    codes = []
+    for tree in obbTrees:
+        codes.append(isHit(tree, pSource, pTarget))
+    return any(codes)
+
+
 def isHit(obbTree, pSource, pTarget):
     r"""Returns True if the line intersects with the mesh in 'obbTree'"""
     code = obbTree.IntersectWithLine(pSource, pTarget, None, None)
     if code==0:
         return False
     return True
+
+def closestIntersect(obbTrees, pSource, pTarget):
+    pointsInter_min = []
+    cellsIds_min = []
+    for i, tree in enumerate(obbTrees):
+        if isHit(tree, pSource, pTarget):
+            pointsInter, cellIdsInter = GetIntersect(tree, pSource, pTarget)
+            if pointsInter_min == []:
+                pointsInter_min = pointsInter
+                cellsIds_min = cellIdsInter
+                min_i = i
+            else:
+                pt_now = pointsInter[0]
+                pt_min = pointsInter_min[0]
+
+                if np.linalg.norm(l2n(pt_now) - l2n(pSource)) < np.linalg.norm(l2n(pt_min) - l2n(pSource)):
+                    pointsInter_min = pointsInter
+                    cellsIds_min = cellIdsInter
+                    min_i = i
+    return pointsInter_min, cellsIds_min, min_i
+
 
 def GetIntersect(obbTree, pSource, pTarget):
     
