@@ -874,10 +874,14 @@ class QMeshViewer(QtWidgets.QFrame):
 
                 # Calculate the reflected ray vector
 
+                #TODO : il faut set les specular et diffuse color du material au début
+                #Ou juste utiliser color ?
                 # ambientMat = l2n(self.powerplant_actor.GetProperty().GetAmbientColor())
                 ambientMat = l2n(self.powerplant_actor.GetProperty().GetColor())
-                specularMat = l2n(self.powerplant_actor.GetProperty().GetSpecularColor())
-                diffuseMat = l2n(self.powerplant_actor.GetProperty().GetDiffuseColor())
+                # specularMat = l2n(self.powerplant_actor.GetProperty().GetSpecularColor())
+                specularMat = l2n(self.powerplant_actor.GetProperty().GetColor())
+                # diffuseMat = l2n(self.powerplant_actor.GetProperty().GetDiffuseColor())
+                diffuseMat = l2n(self.powerplant_actor.GetProperty().GetColor())
 
 
                 intensity = self.light.GetIntensity()
