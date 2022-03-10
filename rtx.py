@@ -867,12 +867,18 @@ class QMeshViewer(QtWidgets.QFrame):
                 intersection_to_light = l2n(self.pos_Light) - l2n(pointsInter[0])
                 intersection_to_light /= np.linalg.norm(intersection_to_light)
 
+                intensity = self.light.GetIntensity()
+
                 if isHit(self.obbTree, self.pos_Light, point):
-                    direct_illumination = l2n((1, 1, 1)) # Change later
+                    direct_illumination = l2n((1, 1, 1))*intensity # Change later
                 else:
                     direct_illumination = l2n((0, 0, 0))
 
                 # Calculate the reflected ray vector
+
+                # GetBorderColor()
+
+
 
                 #TODO : il faut set les specular et diffuse color du material au début
                 #Ou juste utiliser color ?
@@ -884,7 +890,6 @@ class QMeshViewer(QtWidgets.QFrame):
                 diffuseMat = l2n(self.powerplant_actor.GetProperty().GetColor())
 
 
-                intensity = self.light.GetIntensity()
                 ambientLight = l2n(self.light.GetAmbientColor()) * intensity
                 specularLight = l2n(self.light.GetSpecularColor()) * intensity
                 diffuseLight = l2n(self.light.GetDiffuseColor()) * intensity
@@ -907,7 +912,7 @@ class QMeshViewer(QtWidgets.QFrame):
 
                 reflection = 0.8
 
-                return illumination + reflection * self.radianceAtPoint(point, pointsInter[0], nextN, depth + 1, max_depth=max_depth)
+                return illumination + reflection * np.clip(self.radianceAtPoint(point, pointsInter[0], nextN, depth + 1, max_depth=max_depth), 0, 1)
                 return color + self.radianceAtPoint(pointsInter[0], vecRef, depth + 1, cam_pos, max_depth=max_depth)
                 # TODO : Here, find the material and lambert part + how to sample rays
                 # terms = []
