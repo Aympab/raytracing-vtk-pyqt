@@ -116,7 +116,7 @@ class QMeshViewer(QtWidgets.QFrame):
 
         pp_actor = vtkActor()
         pp_actor.SetMapper(pp_mapper)
-        pp_actor.GetProperty().SetColor(colors.GetColor3d('AliceBlue'))
+        pp_actor.GetProperty().SetColor(colors.GetColor3d('Coral'))
 
         self.renderer.AddActor(pp_actor)
         self.powerplant_actor = pp_actor
@@ -129,10 +129,14 @@ class QMeshViewer(QtWidgets.QFrame):
         self.pos_Light = [light_x, light_y, light_z]
         self.light.SetPosition(self.pos_Light)
         self.light.SetDiffuseColor(1, 1, 1)
+        self.light.SetAmbientColor(1.,1.,1.)
+        self.light.SetSpecularColor(1.,1.,1.)
         self.light.SetFocalPoint(0.,0.,0.)
         # self.light.SetConeAngle(90)
         self.light.SetPositional(True)
         self.renderer.AddLight(self.light)
+        
+        
         
         #if the camera focal point is on 0,0,0 or on the target :
         self.followTarget = False 
@@ -363,7 +367,7 @@ class QMeshViewer(QtWidgets.QFrame):
         self.renderer.AddActor(plane_actor)
         self.screen_plane = (plane_actor, plane_source)
 
-        print(f"Sun resolution : {sun_resolution}\nNumber of rays from the sun : {len(self.lines_hit)}")
+        print(f"Sun resolution : {sun_resolution}\nNumber of rays (live rendering) from the sun : {len(self.lines_hit)}")
         self.render_window.Render()
         self.intersect_list = []
         self.pic_width = 4
@@ -655,6 +659,8 @@ class QMeshViewer(QtWidgets.QFrame):
             print("Light from sun. Click again to change")
 
         self.render_window.Render()
+
+
 #endregion
 
 #region Camera
@@ -802,7 +808,7 @@ class QMeshViewer(QtWidgets.QFrame):
                                                              cam_pos,
                                                              pointRayTarget)
                     # TODO : Garder le plus proche des points d'intersect
-                    # ANSWER TODO : C'est le pointsInter[0] justement
+                    # ANSWER TODO : C'est le pointsInter[0]; pointsInter étant la liste de tous les points d'intersections, le [0] c'est le premier
 
                     normalModel = self.normalsModel.GetTuple(cellIdsInter[0])
 
@@ -868,13 +874,16 @@ class QMeshViewer(QtWidgets.QFrame):
 
                 # Calculate the reflected ray vector
 
-                ambientMat = l2n(self.powerplant_actor.GetProperty().GetAmbientColor())
+                # ambientMat = l2n(self.powerplant_actor.GetProperty().GetAmbientColor())
+                ambientMat = l2n(self.powerplant_actor.GetProperty().GetColor())
                 specularMat = l2n(self.powerplant_actor.GetProperty().GetSpecularColor())
                 diffuseMat = l2n(self.powerplant_actor.GetProperty().GetDiffuseColor())
 
-                ambientLight = l2n(self.light.GetAmbientColor())
-                specularLight = l2n(self.light.GetSpecularColor())
-                diffuseLight = l2n(self.light.GetDiffuseColor())
+
+                intensity = self.light.GetIntensity()
+                ambientLight = l2n(self.light.GetAmbientColor()) * intensity
+                specularLight = l2n(self.light.GetSpecularColor()) * intensity
+                diffuseLight = l2n(self.light.GetDiffuseColor()) * intensity
 
                 # Initialize color
                 # ambiant
