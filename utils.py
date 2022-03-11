@@ -54,6 +54,7 @@ def addPoint(renderer, p, radius=5.0, color=[0.0, 0.0, 0.0], resolution=100):
     point.SetRadius(radius)
     point.SetPhiResolution(resolution)
     point.SetThetaResolution(resolution)
+    point.Update()
 
     mapper = vtk.vtkPolyDataMapper()
     mapper.SetInputConnection(point.GetOutputPort())
@@ -164,6 +165,18 @@ def GetIntersect(obbTree, pSource, pTarget):
         cellIdsInter.append(cellIds.GetId(idx))
     
     return pointsInter, cellIdsInter
+
+def getNormals(actor):
+    normalsCalc = vtk.vtkPolyDataNormals()
+    normalsCalc.SetInputConnection(actor.GetOutputPort())
+    normalsCalc.ComputePointNormalsOff()
+    normalsCalc.ComputeCellNormalsOn()
+    normalsCalc.SplittingOff()
+    normalsCalc.FlipNormalsOff()
+    normalsCalc.AutoOrientNormalsOn()
+    normalsCalc.Update()
+    return normalsCalc
+
 
 def clip(l):
     for i, e in enumerate(l) :

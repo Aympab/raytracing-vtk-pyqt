@@ -168,21 +168,7 @@ class QMeshViewer(QtWidgets.QFrame):
         ##SUN's NORMALS
         # # Create a new 'vtkPolyDataNormals' and connect to the sun sphere
         #################################
-        normalsCalcSun = vtk.vtkPolyDataNormals()
-        normalsCalcSun.SetInputConnection(self.sun_ball.GetOutputPort())
-
-        # Disable normal calculation at cell vertices
-        normalsCalcSun.ComputePointNormalsOff()
-        # Enable normal calculation at cell centers
-        normalsCalcSun.ComputeCellNormalsOn()
-        # Disable splitting of sharp edges
-        normalsCalcSun.SplittingOff()
-        # Disable global flipping of normal orientation
-        normalsCalcSun.FlipNormalsOff()
-        # Enable automatic determination of correct normal orientation
-        normalsCalcSun.AutoOrientNormalsOn()
-        # Perform calculation
-        normalsCalcSun.Update()
+        normalsCalcSun = getNormals(self.sun_ball)
 
         # Create a 'dummy' 'vtkCellCenters' to force the glyphs to the cell-centers
         dummy_cellCenterCalcSun = vtk.vtkCellCenters()
@@ -232,6 +218,13 @@ class QMeshViewer(QtWidgets.QFrame):
             # point.SetThetaResolution(1)
             self.cellCenterSun.append(point)
 
+
+        blue_sphere_actor, blue_sphere = addPoint(self.renderer, [100, 100, 100], 
+                                                radius=50, color=[0, 0, 0.5])
+        blue_sphere_actor.GetProperty().SetAmbientColor(0, 0, 0.1)
+        blue_sphere_actor.GetProperty().SetDiffuseColor(0, 0, 0.7)
+        blue_sphere_actor.GetProperty().SetSpecularColor(1, 1, 1)
+
         #For the intersections
         self.obbTrees = []
         obbTree = vtk.vtkOBBTree()
@@ -239,21 +232,24 @@ class QMeshViewer(QtWidgets.QFrame):
         obbTree.BuildLocator()
         self.obbTrees.append(obbTree)
 
+        obbTree2 = vtk.vtkOBBTree()
+        obbTree2.SetDataSet(blue_sphere_actor.GetMapper().GetInput())
+        obbTree2.BuildLocator()
+        self.obbTrees.append(obbTree2)
+
+
+
         self.actorsOfTree = []
         self.actorsOfTree.append(self.powerplant_actor)
+        self.actorsOfTree.append(blue_sphere_actor)
 
         #################################
         #LIVE RTX COMPUTING
         # #################################
         # Create a new 'vtkPolyDataNormals' and connect to our model
-        normalsCalcModel = vtk.vtkPolyDataNormals()
-        normalsCalcModel.SetInputConnection(powerplant_reader.GetOutputPort())
-        normalsCalcModel.ComputePointNormalsOff()
-        normalsCalcModel.ComputeCellNormalsOn()
-        normalsCalcModel.SplittingOff()
-        normalsCalcModel.FlipNormalsOff()
-        normalsCalcModel.AutoOrientNormalsOn()
-        normalsCalcModel.Update()
+        
+        normalsCalcBlueSphere = getNormals(blue_sphere)
+        normalsCalcModel = getNormals(powerplant_reader)
 
         # Create a dummy 'vtkPoints' to act as a container for the point coordinates
         # where intersections are found
@@ -273,7 +269,9 @@ class QMeshViewer(QtWidgets.QFrame):
         # Extract the normal-vector data at the sun's cells
         self.normalsSun = normalsCalcSun.GetOutput().GetCellData().GetNormals()
         # Extract the normal-vector data at the model's cells
-        self.normalsModel = normalsCalcModel.GetOutput().GetCellData().GetNormals()
+        self.normalsModels = []
+        self.normalsModels.append(normalsCalcModel.GetOutput().GetCellData().GetNormals())
+        self.normalsModels.append(normalsCalcBlueSphere.GetOutput().GetCellData().GetNormals())
 
         # Loop through all of sun's cell-centers
         for idx in range(pointsCellCentersSun.GetNumberOfPoints()):
@@ -291,7 +289,7 @@ class QMeshViewer(QtWidgets.QFrame):
                 pointsInter, cellIdsInter, idx_tree = closestIntersect(self.obbTrees, pointSun, pointRayTarget)
 
                 # Get the normal vector at the earth cell that intersected with the ray
-                normalModel =  self.normalsModel.GetTuple(cellIdsInter[0])
+                normalModel =  self.normalsModels[idx_tree].GetTuple(cellIdsInter[0])
                 # Insert the coordinates of the intersection point in the dummy container
                 self.dummy_points.InsertNextPoint(pointsInter[0])
                 
@@ -779,9 +777,9 @@ class QMeshViewer(QtWidgets.QFrame):
         left = tr_mat@left
         right = tr_mat@right
         
-        cam_pos = np.array([0,0,2,1])#.reshape(-1,1)
+        cam_pos = np.array([0,0,2.5,1])#.reshape(-1,1)
         cam_pos = tr_mat@cam_pos
-        cam_pos = (cam_pos[0], cam_pos[1], cam_pos[2])
+        cam_pos = l2n([cam_pos[0], cam_pos[1], cam_pos[2]])
         # self.pos_Camera = cam_pos
 
         #     # Pour chaque pixel de l'image {
@@ -793,16 +791,16 @@ class QMeshViewer(QtWidgets.QFrame):
             for j, x in (enumerate(tabx)):
 
                 pixelPos = l2n((x, y, 0, 1))
-                pixelPos = n2l(tr_mat@pixelPos)
-                pixelPos = (pixelPos[0], pixelPos[1], pixelPos[2])
+                pixelPos = tr_mat@pixelPos
+                pixelPos = np.array([pixelPos[0], pixelPos[1], pixelPos[2]])
                 
-                direction = l2n(pixelPos) - l2n(cam_pos) #TODO : Changer focal pour endroit du pixel
+                direction = pixelPos - cam_pos #TODO : Changer focal pour endroit du pixel
                 direction = direction / np.linalg.norm(direction)
                 
                 pixelColor = (0,0,0)
                 
                 # Créer un rayon qui, de l'oeil, passe par ce pixel
-                pointRayTarget = n2l(l2n(cam_pos) + RayCastLength*direction)
+                pointRayTarget = cam_pos + RayCastLength*direction
 
                 if anyHit(self.obbTrees, cam_pos, pointRayTarget):
                     pointsInter, cellIdsInter, idx_tree = closestIntersect(self.obbTrees,
@@ -811,17 +809,13 @@ class QMeshViewer(QtWidgets.QFrame):
                     # TODO : Garder le plus proche des points d'intersect
                     # ANSWER TODO : C'est le pointsInter[0]; pointsInter étant la liste de tous les points d'intersections, le [0] c'est le premier
 
-                    normalModel = self.normalsModel.GetTuple(cellIdsInter[0])
+                    normalModel = l2n(self.normalsModels[idx_tree].GetTuple(cellIdsInter[0]))
+                    
+                    point = l2n(pointsInter[0])
+                    vecInc = point - cam_pos # Vector from cam to intersect
+                    vecInc = vecInc / np.linalg.norm(vecInc)
 
-                    vecInc = l2n(pointsInter[0] - l2n(cam_pos)) # Vector from cam to intersect
-                    vecInc = n2l(vecInc / np.linalg.norm(vecInc))
-
-                    # Calculate the reflected ray vector
-                    #vecRef = calcVecR(vecInc, normalModel)
-                    #vecRef = vecRef / np.linalg.norm(vecRef)
-                    # recursive call here
-
-                    pixelColor = clip(n2l(self.radianceAtPoint(vecInc, pointsInter[0], normalModel, 0, max_depth=max_depth)))
+                    pixelColor = clip(n2l(self.radianceAtPoint(vecInc, point, normalModel, 0, max_depth=max_depth)))
                 
                 else:
 
@@ -855,42 +849,41 @@ class QMeshViewer(QtWidgets.QFrame):
                 
         else:
             ray_dir = calcVecR(ray_origin, N)
-            out_ray_point = n2l(l2n(point) + RayCastLength*l2n(ray_dir))
-            point = n2l(l2n(N) * 1e-5 + l2n(point)) # To avoid hitting itself
+            out_ray_point = n2l(point + RayCastLength*l2n(ray_dir))
+            point = N * 1e-5 + point # To avoid hitting itself
 
             if anyHit(self.obbTrees, point, out_ray_point):
                 pointsInter, cellIdsInter, idx_tree = closestIntersect(self.obbTrees,
                                                             point,
                                                             out_ray_point)
                 actor = self.actorsOfTree[idx_tree]
+                nextN = l2n(self.normalsModels[idx_tree].GetTuple(cellIdsInter[0]))
 
-                nextN = self.normalsModel.GetTuple(cellIdsInter[0])
+                nextPoint = l2n(pointsInter[0])
                 
-                intersection_to_light = l2n(self.pos_Light) - l2n(pointsInter[0])
+                intersection_to_light = l2n(self.pos_Light) - nextPoint
                 intersection_to_light /= np.linalg.norm(intersection_to_light)
 
                 intensity = self.light.GetIntensity()
 
                 if anyHit(self.obbTrees, self.pos_Light, point):
-                    direct_illumination = l2n((1, 1, 1))*intensity
+                    direct_illumination = np.array([1, 1, 1])*intensity
                 else:
-                    direct_illumination = l2n((0, 0, 0))
-
-                # Calculate the reflected ray vector
-
-                # GetBorderColor()
+                    direct_illumination = np.array([0, 0, 0])
 
 
 
                 #TODO : il faut set les specular et diffuse color du material au début
                 #Ou juste utiliser color ?
-                # ambientMat = l2n(actor.GetProperty().GetAmbientColor())
-                ambientMat = l2n(actor.GetProperty().GetColor())
-                # specularMat = l2n(actor.GetProperty().GetSpecularColor())
-                specularMat = l2n(actor.GetProperty().GetColor())
-                # diffuseMat = l2n(actor.GetProperty().GetDiffuseColor())
-                diffuseMat = l2n(actor.GetProperty().GetColor())
+                ambientMat = l2n(actor.GetProperty().GetAmbientColor())
+                # ambientMat = l2n(actor.GetProperty().GetColor())
+                specularMat = l2n(actor.GetProperty().GetSpecularColor())
+                # specularMat = l2n(actor.GetProperty().GetColor())
+                diffuseMat = l2n(actor.GetProperty().GetDiffuseColor())
+                # diffuseMat = l2n(actor.GetProperty().GetColor())
+                obj_col = l2n(actor.GetProperty().GetColor())
 
+                shininess = 20
 
                 ambientLight = l2n(self.light.GetAmbientColor()) * intensity
                 specularLight = l2n(self.light.GetSpecularColor()) * intensity
@@ -900,36 +893,28 @@ class QMeshViewer(QtWidgets.QFrame):
                 # ambiant
                 illumination = ambientMat * ambientLight
 
-                # diffuse
-                illumination += diffuseMat * diffuseLight * np.dot(intersection_to_light, N) * direct_illumination
+                # diffuse (lambert)
+                illumination += diffuseMat * diffuseLight \
+                    * np.max(np.dot(intersection_to_light, N),0) * obj_col
+                    # * color instead of direct_illumination
 
                 # specular
-                intersection_to_origin = ray_origin - l2n(pointsInter[0])
+                intersection_to_origin = ray_origin - nextPoint
                 intersection_to_origin /= np.linalg.norm(intersection_to_origin)
                 
                 H = intersection_to_light + intersection_to_origin
                 H /= np.clip(np.linalg.norm(H), 0, 1)
                 
-                illumination += specularMat * specularLight * np.dot(l2n(N), H) ** (100 / 4)
+                illumination += specularMat * specularLight * np.power(np.dot(N, H), (shininess / 4))
 
-                reflection = 0.8
+                reflection = 0.5
 
-                return illumination + reflection * np.clip(self.radianceAtPoint(point, pointsInter[0], nextN, depth + 1, max_depth=max_depth), 0, 1)
-                return color + self.radianceAtPoint(pointsInter[0], vecRef, depth + 1, cam_pos, max_depth=max_depth)
-                # TODO : Here, find the material and lambert part + how to sample rays
-                # terms = []
-                # for n in range(n_reflects):
-                
-                incoming_light_ray = l2n(self.radianceAtPoint(pointsInter[0], vecRef, depth + 1, max_depth=max_depth))
-                # lambert = 1 # Easy to compute 
-                # material = 1 # Hard to find in vtk
-                # terms.append(incoming_light_ray * material * lambert)
-                
-                # incoming_light = np.mean(np.asarray(terms), axis=0)
-                # return n2l(incoming_light * material * lambert)
+                return illumination + reflection \
+                    * np.clip(self.radianceAtPoint(point, nextPoint, nextN, depth + 1, 
+                                                max_depth=max_depth), 0, 1)
 
             else: # Reflext background color, here black so no background color
-                return l2n((0, 0, 0))
+                return np.array([0, 0, 0])
         return 0
 
 #endregion
