@@ -26,7 +26,8 @@ Ray tracing was first introduced in 1980 by Turner Whitted in his paper on
 
 This is one of the picture presented in T. Whitted's paper, the rendering time **74 minutes**.
 
-![Whitted Ray Tracing](fig/figureWhitted74min.png)
+<!-- ![Whitted Ray Tracing](fig/figureWhitted74min.png) -->
+<img src="fig/figureWhitted74min.png" alt="" width="300"/>
 
 Since then, a few methods of ray tracing have emmerged, and our hardware too,
 gains in computational power every year. Now, we are able to compute raytracing
@@ -57,7 +58,8 @@ rendering.
 the User interface, this way, we don't have to make complex documentation about
 what keyboard shortcut to use to interact with our VTK panel.
 
-![UI Light sliders](fig/lightSlidersUI.png)
+<!-- ![UI Light sliders](fig/lightSlidersUI.png) -->
+<img src="fig/lightSlidersUI.png" alt="" width="200"/>
 
 To build the UI we used [Qt Designer](https://doc.qt.io/qt-5/qtdesigner-manual.html),
 which generates a `.ui` file. This file is compiled at the start of our
