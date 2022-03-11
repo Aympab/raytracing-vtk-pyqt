@@ -20,9 +20,10 @@ conda.
 - numpy
 - matplotlib
 - vtk9
-- pyQt5
+- pyqt5
 - tqdm (to display progress bar)
 
+You can just import the conda env available in the `environment.yml` file.
 To run the app, just launch the `main.py` file and let the UI guide you !
 
 
