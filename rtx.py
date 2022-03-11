@@ -19,7 +19,6 @@ import numpy as np
 model = "models/Nuclear_Power_Plant_v1/10078_Nuclear_Power_Plant_v1_L3.obj"
 # scene = "models/naboo/naboo_complex.obj"
 
-#TODO : changer la StartTheta ou StartPhi pour que la sphere sun pointe tjrs vers sont focal point ca serait insane
 #TODO : add a comboBox with colors name to change diffuse color light
 
 light_x = 0.0
@@ -28,7 +27,7 @@ light_z = 200.0
 sun_resolution = 4
 sun_color = [1.0, 0.986, 0.24]
 sun_ray_color = [1.0, 1.0, 0.24]
-RayCastLength = 1000.0
+RayCastLength = 10000.0
 
 point_resolution = 5
 intersect_color = [0.0, 0.0, 1.0] #blue
@@ -406,9 +405,9 @@ class QMeshViewer(QtWidgets.QFrame):
         self.render_window.Render()
 
     #intersections, moving cell centers, changing focal point of light
-    """def update_components(self):
+    def update_components(self):
         pointsVTKintersection = vtk.vtkPoints()
-        code = self.obbTree.IntersectWithLine(camera_focus, self.pos_Camera, pointsVTKintersection, None) #None for CellID but we will need this info later
+        # code = self.obbTrees[0].IntersectWithLine(camera_focus, self.pos_Camera, pointsVTKintersection, None) #None for CellID but we will need this info later
 
         pointsVTKIntersectionData = pointsVTKintersection.GetData()
         noPointsVTKIntersection = pointsVTKIntersectionData.GetNumberOfTuples()
@@ -466,10 +465,10 @@ class QMeshViewer(QtWidgets.QFrame):
                 #Change color
                 ac.GetProperty().SetOpacity(1)
                 
-                pointsInter, cellIdsInter = closestIntersect(self.obbTrees, pointSun, pointRayTarget)
+                pointsInter, cellIdsInter, min_i = closestIntersect(self.obbTrees, pointSun, pointRayTarget)
                 ac_pointHit.GetProperty().SetColor(intersect_color)
                 
-                normalModel = self.normalsModel.GetTuple(idx)
+                normalModel = self.normalsModels[min_i].GetTuple(idx)
                 # print(pointsInter[0])
                 
                 if(len(pointsInter) > 0):
