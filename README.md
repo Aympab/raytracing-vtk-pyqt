@@ -17,11 +17,11 @@ You can use the `environment.yml` file to setup your Python environment with
 conda.
 
 ## Required librairies
-numpy
-matplotlib
-vtk9
-pyQt5
-tqdm (to display progress bar)
+- numpy
+- matplotlib
+- vtk9
+- pyQt5
+- tqdm (to display progress bar)
 
 To run the app, just launch the `main.py` file and let the UI guide you !
 
@@ -155,8 +155,8 @@ in the main rendering class, the method is `compute_RTX(self)`.
 - ...
 
 # Usefull websites
-https://github.com/RayTracing/raytracing.github.io
-https://pyscience.wordpress.com/2014/10/05/from-ray-casting-to-ray-tracing-with-python-and-vtk/
-http://www.lama.univ-savoie.fr/pagesmembres/lachaud/Cours/INFO805/Tests/html/ig_tp2.html
-https://medium.com/swlh/ray-tracing-from-scratch-in-python-41670e6a96f9
-https://github.com/RichCartwright/Path-Tracing-Viz
+- https://github.com/RayTracing/raytracing.github.io
+- https://pyscience.wordpress.com/2014/10/05/from-ray-casting-to-ray-tracing-with-python-and-vtk/
+- http://www.lama.univ-savoie.fr/pagesmembres/lachaud/Cours/INFO805/Tests/html/ig_tp2.html
+- https://medium.com/swlh/ray-tracing-from-scratch-in-python-41670e6a96f9
+- https://github.com/RichCartwright/Path-Tracing-Viz

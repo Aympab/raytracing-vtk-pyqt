@@ -15,7 +15,6 @@ from utils import *
 import numpy as np
 
 model = "models/Nuclear_Power_Plant_v1/10078_Nuclear_Power_Plant_v1_L3.obj"
-# scene = "models/naboo/naboo_complex.obj"
 
 #TODO : add a comboBox with colors name to change diffuse color light
 
@@ -98,7 +97,8 @@ class QMeshViewer(QtWidgets.QFrame):
         self.render_window.SetInteractor(self.interactor)
         # render_window.SetSize(512, 512)
         self.interactor.SetRenderWindow(self.render_window)
-        self.renderer.SetBackground(colors.GetColor3d("DarkGreen"))
+        # self.renderer.SetBackground(colors.GetColor3d("DarkGreen"))
+        self.renderer.SetBackground((73./255., 118./255. , 1.))
 
         self.renderer.GetActiveCamera().SetPosition(0,0,500)
 
@@ -113,7 +113,8 @@ class QMeshViewer(QtWidgets.QFrame):
 
         pp_actor = vtkActor()
         pp_actor.SetMapper(pp_mapper)
-        pp_actor.GetProperty().SetColor(colors.GetColor3d('Coral'))
+        # pp_actor.GetProperty().SetColor(colors.GetColor3d('Coral'))
+        pp_actor.GetProperty().SetColor((1., 0.81, 0.28))
         # pp_actor.GetProperty().SetAmbientColor(colors.GetColor3d('Coral'))
         # pp_actor.GetProperty().SetSpecularColor(colors.GetColor3d('Coral'))
         # pp_actor.GetProperty().SetDiffuseColor(colors.GetColor3d('Coral'))
@@ -128,16 +129,15 @@ class QMeshViewer(QtWidgets.QFrame):
         self.light.SetIntensity(0.5)
         self.pos_Light = [light_x, light_y, light_z]
         self.light.SetPosition(self.pos_Light)
-        self.light.SetDiffuseColor(1, 1, 1)
+        # self.light.SetDiffuseColor(1, 1, 1)
+        self.light.SetDiffuseColor(1., 1., 0.2)
         self.light.SetAmbientColor(1.,1.,1.)
         self.light.SetSpecularColor(1.,1.,1.)
         self.light.SetFocalPoint(0.,0.,0.)
         # self.light.SetConeAngle(90)
         self.light.SetPositional(True)
         self.renderer.AddLight(self.light)
-        
-        
-        
+
         #if the camera focal point is on 0,0,0 or on the target :
         self.followTarget = False 
 
@@ -220,10 +220,10 @@ class QMeshViewer(QtWidgets.QFrame):
 
 
         blue_sphere_actor, blue_sphere = addPoint(self.renderer, [100, 100, 100], 
-                                                radius=50, color=[0, 0, 0.5])
-        blue_sphere_actor.GetProperty().SetAmbientColor(0, 0, 0.1)
-        blue_sphere_actor.GetProperty().SetDiffuseColor(0, 0, 0.7)
-        blue_sphere_actor.GetProperty().SetSpecularColor(1, 1, 1)
+                                                radius=50, color=[1., 118/255., 73/255.])
+        # blue_sphere_actor.GetProperty().SetAmbientColor(0, 0, 0.1)
+        # blue_sphere_actor.GetProperty().SetDiffuseColor(0, 0, 0.7)
+        # blue_sphere_actor.GetProperty().SetSpecularColor(1, 1, 1)
 
         #For the intersections
         self.obbTrees = []
@@ -247,7 +247,6 @@ class QMeshViewer(QtWidgets.QFrame):
         #LIVE RTX COMPUTING
         # #################################
         # Create a new 'vtkPolyDataNormals' and connect to our model
-        
         normalsCalcBlueSphere = getNormals(blue_sphere)
         normalsCalcModel = getNormals(powerplant_reader)
 
@@ -413,7 +412,6 @@ class QMeshViewer(QtWidgets.QFrame):
         pointsVTKIntersectionData = pointsVTKintersection.GetData()
         noPointsVTKIntersection = pointsVTKIntersectionData.GetNumberOfTuples()
         
-        # self.intersect_list = []
         current_position_list = []
         
         for idx in range(noPointsVTKIntersection):
@@ -843,7 +841,7 @@ class QMeshViewer(QtWidgets.QFrame):
             if anyHit(self.obbTrees, self.pos_Light, point):
                 return np.array([0, 0, 0])
             else:
-                # return self.light.GetDiffuseColor() #TODO : Get dynamic light color
+                return l2n(self.light.GetDiffuseColor()) #TODO : Get dynamic light color
                 return np.array([1, 1, 1])
                 
         else:
@@ -873,20 +871,14 @@ class QMeshViewer(QtWidgets.QFrame):
                 else:
                     direct_illumination = np.array([0, 0, 0])
 
-
-
-                #TODO : il faut set les specular et diffuse color du material au début
-                #Ou juste utiliser color ?
                 ambientMat = l2n(actor.GetProperty().GetAmbientColor())
-                # ambientMat = l2n(actor.GetProperty().GetColor())
                 specularMat = l2n(actor.GetProperty().GetSpecularColor())
-                # specularMat = l2n(actor.GetProperty().GetColor())
                 diffuseMat = l2n(actor.GetProperty().GetDiffuseColor())
-                # diffuseMat = l2n(actor.GetProperty().GetColor())
                 obj_col = l2n(actor.GetProperty().GetColor())
 
-                # shininess = 100
+                #TODO : All objects should have different value of shininess and reflection
                 shininess = 20
+                reflection = 0.5
 
                 ambientLight = l2n(self.light.GetAmbientColor()) * intensity
                 specularLight = l2n(self.light.GetSpecularColor()) * intensity
@@ -910,15 +902,11 @@ class QMeshViewer(QtWidgets.QFrame):
                 
                 illumination += specularMat * specularLight * np.power(np.dot(N, H), (shininess / 4))
 
-                # reflection = 0.8
-                reflection = 0.3
-
                 current_color = l2n(self.actorsOfTree[idx_tree].GetProperty().GetColor())
                 return illumination + reflection \
                     * np.clip(self.radianceAtPoint(point, nextPoint, nextN, depth + 1, 
                                                 max_depth=max_depth,
                                                 current_color=current_color), 0, 1)
-        return 0
 
 #endregion
 
