@@ -117,14 +117,33 @@ of your image and the max depth you want.
 The algorithm we used is based on different implementations we explored from the
 community. Our final algorithm is :
 
-```python
-algorithm
+```
+Set the image of size (width, height) with black pixel
+Get the "screen" position in the 3D space to get each pixel's position
+
+For each pixel in the image :
+    Cast a ray going from the camera that pass through the pixel's position
+    If this ray hits an objetct :
+        Get the intersection point
+        If there is no obstacle between point and light source :
+            If we reached MaxDepth :
+                Set the pixel's color with the light's diffuse color
+            Else :
+                If the surface is reflective, recursion to get color's contribution from all the objects
+        Else :
+            The point is shadowed, set pixel's color black
+
+    Else (no obstacle for the ray):
+        Set the pixel's color with the object's ambient color
+
 ```
 
 It is pretty basic, the hard part was managing VTK's framework since we had
-never programmed with it.
+never programmed with it. You can find the full method inside the `main.py` file
+in the main rendering class, the method is `compute_RTX(self)`.
 
 # Ameliorations
+- Decoupling the main big class
 - Parallelize the main RTX loop (maybe in another language)
 - Add different sources of light
 - Adding objets live
