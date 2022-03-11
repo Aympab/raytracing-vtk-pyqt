@@ -1,3 +1,4 @@
+![](fig/Logo_Mines_ParisTech.svg.png)
 # Visu raytracing
 Scientific data visualisation project.
 Using online and offline rendering modes with vtraytracing.
@@ -84,10 +85,44 @@ our VTK actors and/or sources.
 Here, we tried to do a "real-time" ray tracing, we wanted to be able to see the
 ray castings from the sun and hitting a surface.
 
-![All UI Preview](fig/allUI_preview.png)
+<!-- ![All UI Preview](fig/allUI_preview.png) -->
+<img src="fig/allUI_preview.png" alt="" width="500"/>
+
+Here is a list of what each Widget does :
+- **Width/Height/Max Depth** : Ray-tracing options (image size, and depth of 
+bouncing rays)
+- **Compute RT button** : Used to launch the ray-tracing computation. This takes
+a long time since we are in sequential python
+- **Light Configuration** :
+  - **Change source button** : This button sets the source of the light from
+VTK renderer's [active camera](https://vtk.org/doc/nightly/html/classvtkRenderer.html#ab14d1aeb74a4990f2da819e09d028d65)
+or from the sun ball displayed in the vtkView
+  - **Sliders** : Each slider corresponds to parameters of the light (sun sphere
+in our case)
+  - **Focal point** : The **"Set on target"** button sets the focal point of the
+light on the current "camera" position (the green sphere in our view). The
+**Follow target** radio button makes the focal point of the light follow the
+position of the "camera"
+  - **Preview Shadows radio button** : This button turns on/off the
+[VTK shadows of the current renderer](https://vtk.org/doc/nightly/html/classvtkRenderer.html#af9e8d4f6ef7154663f82f624c6a001a5).
+Note that the sun's rays are not available in this mode.
 
 ## Offline rendering
-To compute the ray
+To compute the ray tracing algorithm and get and output image, press the
+**Compute RT** button. The rendering can take a long time depending on the size
+of your image and the max depth you want.
+
+![](fig/outputRT.png)
+
+The algorithm we used is based on different implementations we explored from the
+community. Our final algorithm is :
+
+```python
+algorithm
+```
+
+It is pretty basic, the hard part was managing VTK's framework since we had
+never programmed with it.
 
 # Ameliorations
 - Parallelize the main RTX loop (maybe in another language)
