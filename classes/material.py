@@ -13,8 +13,8 @@ class Material :
         
         self.shininess = shininess
         
-        # self.is
-        
+        # self.isTransparent =
+
 class CellInfo() :
     def __init__(self, color=[0.,0.,1.], normal=[1.,1.,0.], isShiny=True) :
         self.color = color

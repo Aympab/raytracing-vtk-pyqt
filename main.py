@@ -13,7 +13,6 @@ from vtkmodules.vtkRenderingCore import (
 from vtk import vtkJPEGReader
 from utils import *
 import numpy as np
-import math
 
 model = "models/Nuclear_Power_Plant_v1/10078_Nuclear_Power_Plant_v1_L3.obj"
 
@@ -22,7 +21,7 @@ model = "models/Nuclear_Power_Plant_v1/10078_Nuclear_Power_Plant_v1_L3.obj"
 light_x = 0.0
 light_y = 50.0
 light_z = 200.0
-sun_resolution = 4
+sun_resolution = 5
 sun_color = [1.0, 0.986, 0.24]
 sun_ray_color = [1.0, 1.0, 0.24]
 RayCastLength = 10000.0
@@ -581,9 +580,6 @@ class QMeshViewer(QtWidgets.QFrame):
         y = self.light.GetPosition()[1]
         z = self.light.GetPosition()[2]
 
-        _, lat, lon = cartesian_to_spherical(x, y, z)
-        x, y, z = spherical_to_cartesian(new_value, lat, lon)
-
         self.light.SetPosition(x, y, z)
         self.sun_ball.SetCenter(x, y, z)
         
@@ -601,9 +597,6 @@ class QMeshViewer(QtWidgets.QFrame):
         x = self.light.GetPosition()[0]
         y = self.light.GetPosition()[1]
         z = self.light.GetPosition()[2]
-
-        r, _, lon = cartesian_to_spherical(x, y, z)
-        x, y, z = spherical_to_cartesian(r, new_value* math.pi/180, lon)
 
         self.light.SetPosition(x, y, z)
         self.sun_ball.SetCenter(x, y, z)
@@ -757,10 +750,10 @@ class QMeshViewer(QtWidgets.QFrame):
         self.render_window.Render()
         
         cam = self.renderer.GetActiveCamera()
-        originPos = cam.GetPosition()
-        focal = cam.GetFocalPoint()
-        clipping = cam.GetClippingRange()
-        viewup = cam.GetViewUp()
+        # originPos = cam.GetPosition()
+        # focal = cam.GetFocalPoint()
+        # clipping = cam.GetClippingRange()
+        # viewup = cam.GetViewUp()
         
         height = self.pic_height
         width = self.pic_width
@@ -808,7 +801,7 @@ class QMeshViewer(QtWidgets.QFrame):
                 pixelPos = tr_mat@pixelPos
                 pixelPos = np.array([pixelPos[0], pixelPos[1], pixelPos[2]])
                 
-                direction = pixelPos - cam_pos #TODO : Changer focal pour endroit du pixel
+                direction = pixelPos - cam_pos
                 direction = direction / np.linalg.norm(direction)
                 
                 pixelColor = (0,0,0)
@@ -855,10 +848,10 @@ class QMeshViewer(QtWidgets.QFrame):
         # de la lumière
         if (depth >= max_depth):
             if anyHit(self.obbTrees, self.pos_Light, point):
-                return np.array([0, 0, 0])
+                return np.array([0., 0., 0.])
+                # return np.array([0, 0, 0])
             else:
-                return l2n(self.light.GetDiffuseColor()) #TODO : Get dynamic light color
-                return np.array([1, 1, 1])
+                return l2n(self.light.GetDiffuseColor())
                 
         else:
             ray_dir = calcVecR(ray_origin, N)
@@ -866,7 +859,10 @@ class QMeshViewer(QtWidgets.QFrame):
             point = N * 1e-5 + point # To avoid hitting itself
 
             if not anyHit(self.obbTrees, point, out_ray_point):
-                return current_color
+                if anyHit(self.obbTrees, point, self.pos_Light):
+                    return l2n((0.,0.,0.))
+                else:    
+                    return current_color
             
             else: 
                 pointsInter, cellIdsInter, idx_tree = closestIntersect(self.obbTrees,
@@ -882,10 +878,10 @@ class QMeshViewer(QtWidgets.QFrame):
 
                 intensity = self.light.GetIntensity()
 
-                if anyHit(self.obbTrees, self.pos_Light, point):
-                    direct_illumination = np.array([1, 1, 1])*intensity
-                else:
-                    direct_illumination = np.array([0, 0, 0])
+                # if anyHit(self.obbTrees, self.pos_Light, point):
+                #     direct_illumination = np.array([1, 1, 1])*intensity
+                # else:
+                #     direct_illumination = np.array([0, 0, 0])
 
                 ambientMat = l2n(actor.GetProperty().GetAmbientColor())
                 specularMat = l2n(actor.GetProperty().GetSpecularColor())
