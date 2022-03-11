@@ -115,6 +115,7 @@ To compute the ray tracing algorithm and get and output image, press the
 of your image and the max depth you want.
 
 ![](fig/outputRT.png)
+![](fig/output500x500.png)
 
 The algorithm we used is based on different implementations we explored from the
 community. Our final algorithm is :
