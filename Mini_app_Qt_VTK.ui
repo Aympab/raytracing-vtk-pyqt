@@ -17,7 +17,7 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>Ray-tracing app</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <property name="sizePolicy">

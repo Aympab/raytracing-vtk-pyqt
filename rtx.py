@@ -1,5 +1,3 @@
-from asyncore import poll3
-from cmath import sin, tan
 import vtk
 from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 from PyQt5 import uic, QtWidgets

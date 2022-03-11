@@ -14,8 +14,11 @@ You can use the `environment.yml` file to setup your Python environment with
 conda.
 
 ## Required librairies
+numpy
+matplotlib
 vtk9
-qt
+pyQt5
+tqdm (to display progress bar)
 
 To run the app, just launch the `main.py` file and let the UI guide you !
 
@@ -50,13 +53,17 @@ translucent surfaces
 In this program, we used the **path tracing** method to compute our offline
 rendering.
 
-# Implementation Logic
+# Implementation Logic & Method
 ## Python's VTK bindings
+For VTK, we decided to give a try to the [Python's vtk library](https://pypi.org/project/vtk/).
+This librairy is nothing more than bindings to the original VTK library. Hence,
+the documentation is exactly the same and we could use VTK just like we would
+have done with a compiled language.
 
-## Usef Interface : Qt & Qt Designer
-    We decided to use Qt (with either PySide or PyQt as a python wrapper) for
-the User interface, this way, we don't have to make complex documentation about
-what keyboard shortcut to use to interact with our VTK panel.
+## User Interface : Qt & Qt Designer
+We decided to use Qt (with either PySide or PyQt as a python wrapper) for the
+User interface, this way, we don't have to make complex documentation about what
+keyboard shortcut to use to interact with our VTK panel.
 
 <!-- ![UI Light sliders](fig/lightSlidersUI.png) -->
 <img src="fig/lightSlidersUI.png" alt="" width="200"/>
@@ -68,10 +75,27 @@ sizes and objects' labels automatically set. We do not have to touch this file
 once it is generated. This method allowed us to make a more complex UI to give
 the user more interaction with our VTK environment.
 
+In the code, we had to make a binding between the QtWidgets' methods (e.g.,
+`ValueChanged` for a Slider) and Python functions that interacts directly with
+our VTK actors and/or sources.
+
+# Using the app
+## Online rendering
+Here, we tried to do a "real-time" ray tracing, we wanted to be able to see the
+ray castings from the sun and hitting a surface.
+
+![All UI Preview](fig/allUI_preview.png)
+
+## Offline rendering
+To compute the ray
+
 # Ameliorations
 - Parallelize the main RTX loop (maybe in another language)
 - Add different sources of light
-- Add different RTX rendering methods
+- Adding objets live
+- Add different ray-tracing rendering methods
+- Give the user more interactions
+- ...
 
 # Usefull websites
 https://github.com/RayTracing/raytracing.github.io
