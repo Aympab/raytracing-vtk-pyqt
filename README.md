@@ -150,6 +150,7 @@ in the main rendering class, the method is `compute_RTX(self)`.
 - Add different sources of light
 - Adding objets live
 - Add different ray-tracing rendering methods
+- Make the sun's rays more dynamic (taking account of thecone angle for example)
 - Give the user more interactions
 - ...
 

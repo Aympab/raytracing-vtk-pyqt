@@ -114,6 +114,9 @@ class QMeshViewer(QtWidgets.QFrame):
         pp_actor = vtkActor()
         pp_actor.SetMapper(pp_mapper)
         pp_actor.GetProperty().SetColor(colors.GetColor3d('Coral'))
+        # pp_actor.GetProperty().SetAmbientColor(colors.GetColor3d('Coral'))
+        # pp_actor.GetProperty().SetSpecularColor(colors.GetColor3d('Coral'))
+        # pp_actor.GetProperty().SetDiffuseColor(colors.GetColor3d('Coral'))
 
         self.renderer.AddActor(pp_actor)
         self.powerplant_actor = pp_actor
@@ -803,8 +806,6 @@ class QMeshViewer(QtWidgets.QFrame):
                     pointsInter, cellIdsInter, idx_tree = closestIntersect(self.obbTrees,
                                                             cam_pos,
                                                             pointRayTarget)
-                    # TODO : Garder le plus proche des points d'intersect
-                    # ANSWER TODO : C'est le pointsInter[0]; pointsInter étant la liste de tous les points d'intersections, le [0] c'est le premier
 
                     normalModel = l2n(self.normalsModels[idx_tree].GetTuple(cellIdsInter[0]))
                     
@@ -812,7 +813,8 @@ class QMeshViewer(QtWidgets.QFrame):
                     vecInc = point - cam_pos # Vector from cam to intersect
                     vecInc = vecInc / np.linalg.norm(vecInc)
 
-                    pixelColor = clip(n2l(self.radianceAtPoint(vecInc, point, normalModel, 0, max_depth=max_depth)))
+                    current_color = l2n(self.actorsOfTree[idx_tree].GetProperty().GetColor())
+                    pixelColor = clip(n2l(self.radianceAtPoint(vecInc, point, normalModel, 0, max_depth=max_depth, current_color=current_color)))
                 
                 else:
 
@@ -834,7 +836,7 @@ class QMeshViewer(QtWidgets.QFrame):
 
         print("Done !")
 
-    def radianceAtPoint(self, ray_origin, point, N, depth, max_depth=1, n_reflects=1):
+    def radianceAtPoint(self, ray_origin, point, N, depth, max_depth=1, n_reflects=1, current_color=np.array([0.,0.,0.])):
         #Si on a atteint la profondeur max, on utilise la contribution directe
         # de la lumière
         if (depth >= max_depth):
@@ -849,7 +851,10 @@ class QMeshViewer(QtWidgets.QFrame):
             out_ray_point = n2l(point + RayCastLength*l2n(ray_dir))
             point = N * 1e-5 + point # To avoid hitting itself
 
-            if anyHit(self.obbTrees, point, out_ray_point):
+            if not anyHit(self.obbTrees, point, out_ray_point):
+                return current_color
+            
+            else: 
                 pointsInter, cellIdsInter, idx_tree = closestIntersect(self.obbTrees,
                                                             point,
                                                             out_ray_point)
@@ -880,6 +885,7 @@ class QMeshViewer(QtWidgets.QFrame):
                 # diffuseMat = l2n(actor.GetProperty().GetColor())
                 obj_col = l2n(actor.GetProperty().GetColor())
 
+                # shininess = 100
                 shininess = 20
 
                 ambientLight = l2n(self.light.GetAmbientColor()) * intensity
@@ -904,14 +910,14 @@ class QMeshViewer(QtWidgets.QFrame):
                 
                 illumination += specularMat * specularLight * np.power(np.dot(N, H), (shininess / 4))
 
-                reflection = 0.5
+                # reflection = 0.8
+                reflection = 0.3
 
+                current_color = l2n(self.actorsOfTree[idx_tree].GetProperty().GetColor())
                 return illumination + reflection \
                     * np.clip(self.radianceAtPoint(point, nextPoint, nextN, depth + 1, 
-                                                max_depth=max_depth), 0, 1)
-
-            else: # Reflext background color, here black so no background color
-                return np.array([0, 0, 0])
+                                                max_depth=max_depth,
+                                                current_color=current_color), 0, 1)
         return 0
 
 #endregion
