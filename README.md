@@ -146,7 +146,7 @@ It is pretty basic, the hard part was managing VTK's framework since we had
 never programmed with it. You can find the full method inside the `main.py` file
 in the main rendering class, the method is `compute_RTX(self)`.
 
-# Ameliorations
+# Improvements
 - Decoupling the main big class
 - Parallelize the main RTX loop (maybe in another language)
 - Add different sources of light
