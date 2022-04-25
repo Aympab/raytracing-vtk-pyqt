@@ -1,7 +1,7 @@
 <!-- ![](fig/Logo_Mines_ParisTech.svg.png) -->
 <img src="fig/Logo_Mines_ParisTech.svg.png" alt="" width="200"/>
 
-# Visu raytracing
+# Raytracing algorithm implementation using VTK
 Scientific data visualisation project.
 Using online and offline rendering modes with vtraytracing.
 
